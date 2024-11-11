@@ -72,12 +72,12 @@ from langchain_community.embeddings import OllamaEmbeddings
 
 
 
-from rag.chain import rag_chain_constructor
+from rag.chain import rag_chain_constructor, construct_time_filter
 
 
 
-
-def init_vars(retriever_top_k = 5):
+@st.cache_resource
+def init_vars(retriever_top_k = 5, default_rag_filter = None):
     load_dotenv(override=True)
 
     COMPLETION_URL = os.getenv("COMPLETION_URL")
@@ -106,8 +106,15 @@ def init_vars(retriever_top_k = 5):
 
     vectorstore = Chroma(persist_directory=DB_PATH,embedding_function=emb)
 
-    default_retriever = vectorstore.as_retriever(search_kwargs = {"k": retriever_top_k})
-
+    if default_rag_filter is None:
+        default_rag_filter = construct_time_filter()
+    
+    # print("default_rag_filter: ", default_rag_filter)
+    
+    default_retriever = vectorstore.as_retriever(search_kwargs = {"k": retriever_top_k, "filter": default_rag_filter})
+    # default_retriever = vectorstore.as_retriever(search_kwargs = {"k": retriever_top_k})
+    
+    
     return llm, emb, vectorstore, default_retriever, retriever_top_k
 
 

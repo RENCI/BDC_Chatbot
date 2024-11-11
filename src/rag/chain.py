@@ -17,7 +17,14 @@ from langchain.chains.query_constructor.ir import (
 # from langchain.retrievers.self_query.chroma import ChromaTranslator
 from langchain_community.query_constructors.chroma import ChromaTranslator
 
-from datetime import datetime, timedelta
+
+
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional
+
+
+
+from datetime import datetime, timedelta, date
 
 
 
@@ -70,26 +77,89 @@ If there is context provided, answer the question based on the context.\
     return rag_chain
 
 
-class Search(BaseModel):
-    start_date: Optional[int]
-    end_date: Optional[int]
+class date_filter_params(BaseModel):
+    start_date: Optional[int] = None
+    end_date: Optional[int] = None
 
 
-def construct_time_filter():
-    search_query = Search(start_date=(datetime.now() - timedelta(days=7)).timestamp())
+    @field_validator("start_date", mode="before")
+    def validate_start_date(cls, v):
+        if not v is None:
+            if isinstance(v, datetime):
+                v = v.timestamp()
+            if isinstance(v, date):
+                v = datetime.combine(v, datetime.min.time()).timestamp()
+            if not isinstance(v, int):
+                v = int(v)
+        
+        return v
+        
+    @field_validator("end_date", mode="before")
+    def validate_end_date(cls, v):
+        if not v is None:
+            if isinstance(v, datetime):
+                v = v.timestamp()
+            if isinstance(v, date):
+                v = datetime.combine(v, datetime.max.time()).timestamp()
+            if not isinstance(v, int):
+                v = int(v)
+        
+        return v
+        
+
+def construct_time_filter(search_query: date_filter_params = None):
+    
+    if search_query is None:
+        search_query = date_filter_params(start_date=(datetime.now() - timedelta(days=7)).timestamp())
     
     
+    
+    # only filter by timestamp if timestamp exists in attribute
+    print(search_query)
     
     comparisons = []
-    if query.start_date is not None:
+    if search_query.start_date is not None:
         comparisons.append(
             Comparison(
                 comparator=Comparator.GTE,
                 attribute="timestamp",
-                value=query.start_date,
+                value=search_query.start_date,
+            )
+        )
+    if search_query.end_date is not None:
+        comparisons.append(
+            Comparison(
+                comparator=Comparator.LTE,
+                attribute="timestamp",
+                value=search_query.end_date,
             )
         )
     
+    # OR doc_type in in ['event', 'news']
+    timestamp_DNE = Comparison(
+        comparator=Comparator.NIN,
+            attribute="doc_type",
+            value=['event',],
+    )
+    
+    
+    
+    if len(comparisons) == 0:
+        return None
+    elif len(comparisons) == 1:
+        rag_filter = ChromaTranslator().visit_operation(
+            Operation(operator=Operator.OR, 
+                      arguments=[timestamp_DNE, comparisons[0]]))
+    
+    else:
+        rag_filter = ChromaTranslator().visit_operation(
+            Operation(operator=Operator.OR, 
+                      arguments=[timestamp_DNE, Operation(operator=Operator.AND, arguments=comparisons)])
+        )
+    
+    print('rag_filter: ', rag_filter)
+    
+    return rag_filter
 
 
 
