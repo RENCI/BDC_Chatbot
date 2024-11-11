@@ -77,7 +77,7 @@ from rag.chain import rag_chain_constructor, construct_time_filter
 
 
 @st.cache_resource
-def init_vars(retriever_top_k = 5, default_rag_filter = None):
+def init_vars(retriever_top_k = 5, score_threshold = 0., default_rag_filter = None):
     load_dotenv(override=True)
 
     COMPLETION_URL = os.getenv("COMPLETION_URL")
@@ -111,7 +111,11 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None):
     
     # print("default_rag_filter: ", default_rag_filter)
     
-    default_retriever = vectorstore.as_retriever(search_kwargs = {"k": retriever_top_k, "filter": default_rag_filter})
+    default_retriever = vectorstore.as_retriever(
+        search_kwargs = {"k": retriever_top_k, 
+                         "score_threshold": score_threshold,
+                         "filter": default_rag_filter, 
+                         })
     # default_retriever = vectorstore.as_retriever(search_kwargs = {"k": retriever_top_k})
     
     
@@ -129,7 +133,7 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None):
 
 
 
-llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=5)
+llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=10, score_threshold=0.1)
 
 
 default_rag_chain = rag_chain_constructor(default_retriever, llm)

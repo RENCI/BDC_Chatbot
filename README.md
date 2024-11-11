@@ -16,6 +16,8 @@ kubectl -n ner port-forward svc/ollama 11434:11434
 
 > [!WARNING]
 > To use ${\color{orange}\text{vLLM}}$ API for chat completion, remove `parallel_tool_calls=False` in `langchain_openai\chat_models\base.py`
+> Add `Comparator.IN, Comparator.NIN` in `langchain_community\query_constructors\chroma.py` under `allowed_comparators`
+
 
 > [!IMPORTANT]
 > Chroma DB initialization might quit without error or warning, might be caused by compatibility issue with Windows. 
