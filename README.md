@@ -30,4 +30,4 @@ streamlit run ./src/streamlit_app.py                                # run stream
 > [!IMPORTANT]
 >
 > - Chroma DB initialization might quit without error or warning, might be caused by compatibility issue with Windows.
-> - Clone the [BDC website repo](https://github.com/stagecc/interim-bdc-website/tree/main) to the same directory as this repo, and run `python ./src/preproc_doc.py` to preprocess the website.
+> - Clone the [BDC website repo](https://github.com/stagecc/interim-bdc-website/tree/main) to the a directory with the same parent directory as this repo, and run `python ./src/preproc_doc.py` to preprocess the website.
