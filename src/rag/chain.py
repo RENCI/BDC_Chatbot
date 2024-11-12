@@ -28,6 +28,16 @@ from datetime import datetime, timedelta, date
 
 
 
+summary_prompt = ChatPromptTemplate.from_messages(
+    [("system", "Write a concise summary of the following text in 1-3 sentences, return the summary ONLY, This is NOT a conversation. \\n\\n{text}")]
+)
+def get_summary(text: str, llm):
+    return (summary_prompt|llm).invoke({"text": text}).model_dump()['content']
+
+
+
+
+
 def rag_chain_constructor(retriever, llm):
     
 

@@ -73,34 +73,12 @@ from langchain_community.embeddings import OllamaEmbeddings
 
 
 from rag.chain import rag_chain_constructor, construct_time_filter
-
+from script_utils import set_emb_llm
 
 
 @st.cache_resource
-def init_vars(retriever_top_k = 5, score_threshold = 0., default_rag_filter = None):
-    load_dotenv(override=True)
-
-    COMPLETION_URL = os.getenv("COMPLETION_URL")
-    COMPLETION_MODEL = os.getenv("COMPLETION_MODEL")
-    EMBEDDING_URL = os.getenv("EMBEDDING_URL")
-    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
-    DB_PATH = os.getenv("DB_PATH")
-
-
-    if COMPLETION_URL and COMPLETION_MODEL:
-        llm = ChatOpenAI(base_url=COMPLETION_URL, model=COMPLETION_MODEL, temperature=0)
-        print("model: ", COMPLETION_MODEL, "base_url: ", COMPLETION_URL)
-    else:
-        llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-        print("model: gpt-3.5-turbo")
-
-
-    if EMBEDDING_URL and EMBEDDING_MODEL:
-        emb = OllamaEmbeddings(base_url=EMBEDDING_URL, model=EMBEDDING_MODEL, temperature=0)
-        print("model: ", EMBEDDING_MODEL, "base_url: ", EMBEDDING_URL)
-    else:
-        emb = OpenAIEmbeddings(model="text-embedding-3-small")
-        print("model: text-embedding-3-small")
+def init_vars(retriever_top_k = 5, default_rag_filter = None):
+    emb, llm, DB_PATH = set_emb_llm()
 
     
 
@@ -113,7 +91,6 @@ def init_vars(retriever_top_k = 5, score_threshold = 0., default_rag_filter = No
     
     default_retriever = vectorstore.as_retriever(
         search_kwargs = {"k": retriever_top_k, 
-                         "score_threshold": score_threshold,
                          "filter": default_rag_filter, 
                          })
     # default_retriever = vectorstore.as_retriever(search_kwargs = {"k": retriever_top_k})
@@ -133,7 +110,7 @@ def init_vars(retriever_top_k = 5, score_threshold = 0., default_rag_filter = No
 
 
 
-llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=10, score_threshold=0.1)
+llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=10)
 
 
 default_rag_chain = rag_chain_constructor(default_retriever, llm)
