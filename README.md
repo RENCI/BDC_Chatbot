@@ -17,7 +17,7 @@ kubectl -n ner port-forward svc/vllm-llama-3-1-8b-instruct 8080:80  # vLLM port-
 kubectl -n ner port-forward ollama-dd6845745-2txz8 11434:11434      
 
 
-python ./src/preproc_doc.py                                         # preprocess BDC website repo
+python ./src/preproc_doc.py                                         # [Optional] preprocess BDC website repo
 python -m src.prepare_chromadb                                      # create chroma db
 streamlit run ./src/streamlit_app.py                                # run streamlit app
 ```
