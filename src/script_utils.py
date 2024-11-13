@@ -3,9 +3,9 @@ import os
 from dotenv import load_dotenv
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_community.embeddings import OllamaEmbeddings
+# from langchain_community.embeddings import OllamaEmbeddings
 
-
+from langchain_ollama import OllamaEmbeddings
 
 def set_emb_llm():
 
@@ -27,7 +27,8 @@ def set_emb_llm():
 
 
     if EMBEDDING_URL and EMBEDDING_MODEL:
-        emb = OllamaEmbeddings(base_url=EMBEDDING_URL, model=EMBEDDING_MODEL, temperature=0)
+        # emb = OllamaEmbeddings(base_url=EMBEDDING_URL, model=EMBEDDING_MODEL, temperature=0)
+        emb = OllamaEmbeddings(base_url=EMBEDDING_URL, model=EMBEDDING_MODEL)
         print("model: ", EMBEDDING_MODEL, "base_url: ", EMBEDDING_URL)
     else:
         emb = OpenAIEmbeddings(model="text-embedding-3-small")
