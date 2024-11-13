@@ -167,3 +167,5 @@ llm_docs/
 
 # ignore all ipynb files
 *.ipynb
+
+.vscode/
