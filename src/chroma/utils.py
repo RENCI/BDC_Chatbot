@@ -19,11 +19,13 @@ def loadPKL(file_path, doc_type, emb, llm = None, use_summary = False):
     page_contents = [row['content'] for row in pkl_list]
     metadata = [dict(row['metadata'], doc_type=doc_type) for row in pkl_list]
     
-    embeddings = emb.embed_documents(page_contents)
     if use_summary:
-        
-        
-        page_contents = [get_summary(page_content, llm) for page_content in tqdm(page_contents, total=len(page_contents))]
+        summaries = [get_summary(page_content, llm) for page_content in tqdm(page_contents, total=len(page_contents))]
+        metadata = [dict(metadata, summary=summary) for metadata, summary in zip(metadata, summaries)]
+    else:
+        summaries = page_contents
+    embeddings = emb.embed_documents(summaries)
+
         
     return page_contents, metadata, embeddings
     
