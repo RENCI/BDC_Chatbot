@@ -8,8 +8,10 @@ from preproc.proc_BDC_repo import get_fellow_files, get_data_mdx_files, clean_md
 
 # process data dir
 
-data_dir = "../../interim-bdc-website/src/data/"
+data_dir = "../interim-bdc-website/src/data/"
+pages_dir = '../interim-bdc-website/src/pages/'
 
+save_dir = "./data/"
 
 
 # region: process fellows
@@ -27,7 +29,7 @@ for fellow in fellows:
 
 
 
-print(f"Fellows: {len(fellows)}")
+# print(f"Fellows: {len(fellows)}")
 
 # process latest-updates
 print("Processing latest-updates...")
@@ -82,7 +84,7 @@ for event in events:
 # region: process pages dir
 
 
-pages_dir = '../../interim-bdc-website/src/pages/'
+print("Processing pages...")
 page_dir_paths = ["use-bdc/analyze-data/", ]
 page_file_paths = ["join-bdc/index.mdx", "use-bdc/share-data.mdx", 
                    "user-resources/terms-of-use.mdx", "user-resources/usage-costs.mdx", "user-resources/usage-terms.mdx",
@@ -122,16 +124,16 @@ for metadata, content in tqdm(zip(metadata_list, page_content_list)):
 
 
 # save all content and metadata in pkl
-with open('../data/fellows.pkl', 'wb') as f:
+with open(save_dir+'/fellows.pkl', 'wb') as f:
     pickle.dump(fellows, f)
 
-with open('../data/latest_updates.pkl', 'wb') as f:
+with open(save_dir+'/latest_updates.pkl', 'wb') as f:
     pickle.dump(updates, f)
 
-with open('../data/events.pkl', 'wb') as f:
+with open(save_dir+'/events.pkl', 'wb') as f:
     pickle.dump(events, f)
 
-with open('../data/pages.pkl', 'wb') as f:
+with open(save_dir+'/pages.pkl', 'wb') as f:
     pickle.dump(pages_data, f)
 
 
