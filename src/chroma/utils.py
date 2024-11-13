@@ -16,7 +16,9 @@ from tqdm import tqdm
 def loadPKL(file_path, doc_type, emb, llm = None, use_summary = False):
     with open(file_path, 'rb') as f:
         pkl_list = pickle.load(f)
+    
     page_contents = [row['content'] for row in pkl_list]
+    
     metadata = [dict(row['metadata'], doc_type=doc_type) for row in pkl_list]
     
     if use_summary:
@@ -24,9 +26,9 @@ def loadPKL(file_path, doc_type, emb, llm = None, use_summary = False):
         metadata = [dict(metadata, summary=summary) for metadata, summary in zip(metadata, summaries)]
     else:
         summaries = page_contents
+        
     embeddings = emb.embed_documents(summaries)
 
-        
     return page_contents, metadata, embeddings
     
 

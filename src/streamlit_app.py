@@ -110,7 +110,7 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None):
 
 
 
-llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=10)
+llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=5)
 
 
 default_rag_chain = rag_chain_constructor(default_retriever, llm)
@@ -147,7 +147,9 @@ def parse_text(answer, context) -> str:
         output += "\n\n#### Sources:\n"
 
     for i, source in enumerate(sources):
-        output += f"###### {i + 1}. [{titles[i]}]({source})\n\n"
+        # remove interim-bdc-website/ from the source path
+        path = source.replace("interim-bdc-website/", "")
+        output += f"###### {i + 1}. [{titles[i]}](https://github.com/stagecc/interim-bdc-website/tree/main/{path})\n\n"
         output += f"```\n{contents[i][:100]}\n```\n\n\n"
 
     return output
