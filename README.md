@@ -13,8 +13,8 @@ pip install -r requirements.txt
 ```bash
 kubectl -n ner port-forward svc/vllm-llama-3-1-8b-instruct 8080:80  # vLLM port-forward
 
-# kubectl -n ner port-forward svc/ollama 11434:11434                # Ollama port-forward
-kubectl -n ner port-forward ollama-dd6845745-2txz8 11434:11434      
+kubectl -n ner port-forward svc/ollama 11434:11434                  # Ollama port-forward
+# kubectl -n ner port-forward ollama-dd6845745-2txz8 11434:11434      
 
 
 python ./src/preproc_doc.py                                         # [Optional] preprocess BDC website repo
