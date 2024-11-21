@@ -76,6 +76,11 @@ from rag.chain import rag_chain_constructor, construct_time_filter
 from script_utils import set_emb_llm
 
 
+
+with open( "style.css" ) as css:
+    st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
+
+
 @st.cache_resource
 def init_vars(retriever_top_k = 5, default_rag_filter = None):
     emb, llm, DB_PATH = set_emb_llm()
@@ -166,8 +171,7 @@ def parse_text(answer, context) -> str:
 
 
 # Set the title for the Streamlit app
-st.title("BioData Catalyst Chatbot")
-
+st.title("BDC Bot")
 
 
 # Initialize chat history
