@@ -5,3 +5,7 @@ html, body, h1 {
 h1 {
     color: #202050;
 }
+
+[data-testid="stDecoration"] {
+    background-image: linear-gradient(90deg, #31333F, #b33243);
+}
