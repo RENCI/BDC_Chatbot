@@ -79,7 +79,7 @@ from script_utils import set_emb_llm
 
 st.set_page_config(
     page_title="BDC Bot",
-    page_icon="static/bot-32x32.png"
+    page_icon="static/bot-light-32x32.png"
 )
 
 
