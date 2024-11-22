@@ -155,6 +155,7 @@ def parse_text(answer, context) -> str:
             titles.append(f"{doc.metadata['doc_type']}: {doc.metadata['file_path']}")
             contents.append(doc.page_content)
 
+    print(sources)
 
     if len(sources) == 1:
         output += "\n\n#### Source:\n"
@@ -165,7 +166,7 @@ def parse_text(answer, context) -> str:
         # remove interim-bdc-website/ from the source path
         path = source.replace("interim-bdc-website/", "")
         output += f"###### {i + 1}. [{titles[i]}](https://github.com/stagecc/interim-bdc-website/tree/main/{path})\n\n"
-        output += f"```\n{contents[i][:100]}\n```\n\n\n"
+        #output += f"```\n{contents[i][:100]}\n```\n\n\n"
 
     return output
 
