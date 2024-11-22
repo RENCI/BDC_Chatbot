@@ -76,6 +76,22 @@ from rag.chain import rag_chain_constructor, construct_time_filter
 from script_utils import set_emb_llm
 
 
+
+st.set_page_config(
+    page_title="BDC Bot",
+    page_icon="static/bot-light-32x32.png"
+)
+
+
+with open( "style.css" ) as css:
+    st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
+    
+
+logo = "static/bdc-bot-logo-2.png"
+bot_icon = "static/bot-32x32.png"
+user_icon = "static/user-32x32.png"
+
+
 @st.cache_resource
 def init_vars(retriever_top_k = 5, default_rag_filter = None):
     emb, llm, DB_PATH = set_emb_llm()
@@ -141,16 +157,17 @@ def parse_text(answer, context) -> str:
             contents.append(doc.page_content)
 
 
+    output += "\n\n###### "
     if len(sources) == 1:
-        output += "\n\n#### Source:\n"
+        output += "Source:\n"
     elif len(sources) > 1:
-        output += "\n\n#### Sources:\n"
+        output += "Sources:\n"
 
     for i, source in enumerate(sources):
         # remove interim-bdc-website/ from the source path
         path = source.replace("interim-bdc-website/", "")
         output += f"###### {i + 1}. [{titles[i]}](https://github.com/stagecc/interim-bdc-website/tree/main/{path})\n\n"
-        output += f"```\n{contents[i][:100]}\n```\n\n\n"
+        #output += f"```\n{contents[i][:100]}\n```\n\n\n"
 
     return output
 
@@ -166,8 +183,8 @@ def parse_text(answer, context) -> str:
 
 
 # Set the title for the Streamlit app
-st.title("BioData Catalyst Chatbot")
-
+#st.title("BDC Bot")
+st.image(logo, width=200)
 
 
 # Initialize chat history
@@ -195,14 +212,14 @@ if prompt := st.chat_input("Ask a question"):
     
     for i in range(len(st.session_state['displayed_history'])):
         role, content = st.session_state['displayed_history'][i]
-        st.chat_message(role).write(content)
+        st.chat_message(role, avatar=user_icon if role == "user" else bot_icon).write(content)
     
     
     
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=user_icon):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=bot_icon):
         container = st.empty()
 
         
