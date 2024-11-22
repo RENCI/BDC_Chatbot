@@ -9,3 +9,7 @@ h1 {
 [data-testid="stDecoration"] {
     background-image: linear-gradient(90deg, #31333F, #b33243);
 }
+
+a {
+    color: #3c718a !important;
+}
