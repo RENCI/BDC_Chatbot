@@ -87,6 +87,7 @@ with open( "style.css" ) as css:
     st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
     
 
+logo = "static/bdc-bot-logo-2.png"
 bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
 
@@ -155,7 +156,6 @@ def parse_text(answer, context) -> str:
             titles.append(f"{doc.metadata['doc_type']}: {doc.metadata['file_path']}")
             contents.append(doc.page_content)
 
-    print(sources)
 
     if len(sources) == 1:
         output += "\n\n#### Source:\n"
@@ -182,7 +182,8 @@ def parse_text(answer, context) -> str:
 
 
 # Set the title for the Streamlit app
-st.title("BDC Bot")
+#st.title("BDC Bot")
+st.image(logo, width=200)
 
 
 # Initialize chat history
