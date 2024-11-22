@@ -77,8 +77,18 @@ from script_utils import set_emb_llm
 
 
 
+st.set_page_config(
+    page_title="BDC Bot",
+    page_icon="static/bot-32x32.png"
+)
+
+
 with open( "style.css" ) as css:
     st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
+    
+
+bot_icon = "static/bot-32x32.png"
+user_icon = "static/user-32x32.png"
 
 
 @st.cache_resource
@@ -199,14 +209,14 @@ if prompt := st.chat_input("Ask a question"):
     
     for i in range(len(st.session_state['displayed_history'])):
         role, content = st.session_state['displayed_history'][i]
-        st.chat_message(role).write(content)
+        st.chat_message(role, avatar=user_icon if role == "user" else bot_icon).write(content)
     
     
     
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=user_icon):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=bot_icon):
         container = st.empty()
 
         
