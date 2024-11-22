@@ -157,7 +157,7 @@ def parse_text(answer, context) -> str:
             contents.append(doc.page_content)
 
 
-    output += "\n\n###### "
+    output += "\n###### "
     if len(sources) == 1:
         output += "Source:\n"
     elif len(sources) > 1:
@@ -166,7 +166,7 @@ def parse_text(answer, context) -> str:
     for i, source in enumerate(sources):
         # remove interim-bdc-website/ from the source path
         path = source.replace("interim-bdc-website/", "")
-        output += f"###### {i + 1}. [{titles[i]}](https://github.com/stagecc/interim-bdc-website/tree/main/{path})\n\n"
+        output += f"{i + 1}. [{titles[i]}](https://github.com/stagecc/interim-bdc-website/tree/main/{path})\n"
         #output += f"```\n{contents[i][:100]}\n```\n\n\n"
 
     return output
