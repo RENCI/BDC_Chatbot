@@ -28,6 +28,72 @@ from datetime import datetime, timedelta, date
 
 
 
+
+
+from nemoguardrails import RailsConfig
+from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
+
+config = RailsConfig.from_path("config")
+guardrails = RunnableRails(config, verbose=True, output_key="answer")
+
+
+
+# from langchain_core.runnables import chain
+from typing import List
+
+from langchain_core.documents import Document
+# @chain
+# def retriever(query: str) -> List[Document]:
+#     docs, scores = zip(*vectorstore.similarity_search_with_score(query))
+#     for doc, score in zip(docs, scores):
+#         doc.metadata["score"] = score
+
+#     return docs
+
+
+
+from typing import Any, Dict
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.vectorstores.base import VectorStoreRetriever, VectorStore
+
+class RetrieverWithScore(VectorStoreRetriever):
+    # init with vectorstore
+    def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
+        """Initialize with vectorstore."""
+        super().__init__(vectorstore=vectorstore, **kwargs)
+    
+    
+    def _get_docs_with_query(
+        self, query: str, search_kwargs: Dict[str, Any]
+    ) -> List[Document]:
+        """Get docs, adding score information."""
+        docs, scores = zip(
+            *self.vectorstore.similarity_search_with_score(query, **search_kwargs)
+        )
+        for doc, score in zip(docs, scores):
+            doc.metadata["similarity_score"] = score
+
+        return docs
+    
+    def _get_relevant_documents(
+        self, query: str, *, run_manager: Any = None, **kwargs: Any
+    ) -> List[Document]:
+        """Get documents relevant to a query.
+        
+        Args:
+            query: String to find relevant documents for
+            run_manager: Optional callback manager
+            **kwargs: Additional parameters to pass to similarity search
+        
+        Returns:
+            List of relevant documents
+        """
+        return self._get_docs_with_query(query, kwargs)
+
+
+
+
+
 summary_prompt = ChatPromptTemplate.from_messages(
     [("system", "Write a concise summary of the following text in 1-3 sentences, return the summary ONLY, This is NOT a conversation. \\n\\n{text}")]
 )
@@ -38,13 +104,17 @@ def get_summary(text: str, llm):
 
 
 
-def rag_chain_constructor(retriever, llm):
+def rag_chain_constructor(retriever, llm, vectorstore: VectorStore = None):
+    if vectorstore is not None:
+        retriever = RetrieverWithScore(vectorstore)
+    
     
 
-    contextualize_q_system_prompt = """Given a chat history and the latest user question \
+    contextualize_q_system_prompt = """You are an assistant, called "BioData Catalyst(BDC) Assistant", for question-answering tasks related to BioData Catalyst. \
+Given a chat history and the latest user question \
 which might reference context in the chat history, formulate a standalone question \
-which can be understood without the chat history. Do NOT answer the question, \
-just reformulate it if needed and otherwise return it as is."""
+which can be understood without the chat history. Replace all "BDC" in user input with "BioData Catalyst". \
+Do NOT answer the question, just reformulate it if needed and otherwise return it as is."""
     contextualize_q_prompt = ChatPromptTemplate.from_messages(
         [
             ("system", contextualize_q_system_prompt),
@@ -60,11 +130,12 @@ just reformulate it if needed and otherwise return it as is."""
     )
 
 
-
-    qa_system_prompt = """You are an assistant, called "BioData Catalyst(BDC) Assistant", for question-answering tasks related BioData Catalyst. \
+# Use 1 paragraph and keep the answer concise, unless otherwise specified.\
+    qa_system_prompt = """You are an assistant, called "BioData Catalyst(BDC) Assistant", for question-answering tasks related to BioData Catalyst. (BDC only stands for BioData Catalyst, not other organizations)\
 Use the following pieces of retrieved context to answer the question. \
 If you can't get an answer base on the context, just say that you don't know. \
-Use 1-3 sentences and keep the answer concise, unless otherwise specified.\
+Keep the answer concise, prioritize using 1 paragraph, and include the most relevant information, unless a lengthier answer is required to answer the question or otherwise specified. \
+You can use bullet points and markdown formatting if either is needed.\
 The context are retrieved based on the user query and the chat history.\
 If there is context provided, answer the question based on the context.\
 
@@ -84,7 +155,7 @@ If there is context provided, answer the question based on the context.\
     
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
     
-    return rag_chain
+    return guardrails | rag_chain
 
 
 class date_filter_params(BaseModel):

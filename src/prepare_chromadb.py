@@ -40,7 +40,7 @@ import pickle
 
 from .chroma.utils import create_chroma_client
 
-from .script_utils import set_emb_llm
+from .utils import set_emb_llm
 
 emb, llm, DB_PATH = set_emb_llm()
 

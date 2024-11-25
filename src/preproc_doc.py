@@ -3,10 +3,13 @@ from pathlib import Path
 from tqdm import tqdm
 import pickle
 
-from preproc.proc_BDC_repo import get_fellow_files, get_data_mdx_files, clean_mdx, get_all_mdx_paths, clean_path
+from preproc.proc_BDC_repo import get_fellow_files, get_data_mdx_files, clean_mdx, get_all_mdx_paths, clean_path, paths_to_urls
 
 
 # process data dir
+
+base_url = "https://biodatacatalyst.nhlbi.nih.gov/"
+github_base_url = "https://github.com/stagecc/interim-bdc-website/tree/main/"
 
 data_dir = "../interim-bdc-website/src/data/"
 pages_dir = '../interim-bdc-website/src/pages/'
@@ -18,7 +21,7 @@ save_dir = "./data/"
 print("Processing fellows...")
 fellow_dir = data_dir + "fellows/"
 
-fellows = get_fellow_files(Path(fellow_dir).resolve(), data_dir)
+fellows = get_fellow_files(Path(fellow_dir).resolve(), data_dir, base_url=base_url, remote_file_dir=github_base_url)
 
 for fellow in fellows:
     fellow['metadata']['project_title'] = fellow['metadata']['project']['title']
@@ -35,7 +38,7 @@ for fellow in fellows:
 print("Processing latest-updates...")
 updates_dir = data_dir + "latest-updates/"
 
-updates = get_data_mdx_files(Path(updates_dir).resolve(), data_dir)
+updates = get_data_mdx_files(Path(updates_dir).resolve(), data_dir, base_url=base_url, remote_file_dir=github_base_url)
 
 for update in updates:
     update['metadata']['date'] = update['metadata']['date'].strftime("%Y-%m-%d")
@@ -58,7 +61,7 @@ for update in updates:
 print("Processing events...")
 events_dir = data_dir + "events/"
 
-events = get_data_mdx_files(Path(events_dir).resolve(), data_dir)
+events = get_data_mdx_files(Path(events_dir).resolve(), data_dir, base_url=base_url, remote_file_dir=github_base_url)
 
 
 # convert event date to string
@@ -92,15 +95,19 @@ page_file_paths = ["join-bdc/index.mdx", "use-bdc/share-data.mdx",
                    "use-bdc/explore-data/index.mdx"]
 
 
-mdx_paths = get_all_mdx_paths(pages_dir, page_dir_paths, page_file_paths)
+mdx_paths, relative_paths = get_all_mdx_paths(pages_dir, page_dir_paths, page_file_paths)
+
+pages_url = paths_to_urls(base_url, relative_paths)
 
 
 metadata_list = []
 page_content_list = []
 
-for path in tqdm(mdx_paths):
+# print(len(mdx_paths), mdx_paths[0])
+for i, path in tqdm(enumerate(mdx_paths)):
     header, page_content = clean_mdx(path)
     header['file_path'] = clean_path(path, pages_dir)
+    header['page_url'] = pages_url[i]
     metadata_list.append(header)
     page_content_list.append(page_content)
 

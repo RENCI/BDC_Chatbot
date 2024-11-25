@@ -8,6 +8,8 @@ from datetime import datetime
     
 from tqdm import tqdm  
 
+from urllib.parse import quote
+
 # from pprint import pprint   
 
 
@@ -32,12 +34,20 @@ def parse_fellow_files(file_path, root_dir):
             
             fellow_data = yaml.safe_load(yaml_content)
             fellow_data["file_path"] = clean_path(file_path, root_dir)
+            # remove the first part of the path
+            fellow_data["relative_file_path"] = "/".join(fellow_data["file_path"].split("/")[1:])
+            
             return fellow_data
     except yaml.YAMLError as e:
         print(f"Error parsing {file_path}: {e}")
         return None
 
-def get_fellow_files(fellow_dir, root_dir):
+# https://biodatacatalyst.nhlbi.nih.gov/about/bdc-fellows/#:~:text=from%20that%20time.-,Alexander%20Bick%2C%20MD%2C%20PhD,-Harrison%20Brand%2C%20PhD
+# https://biodatacatalyst.nhlbi.nih.gov/about/bdc-fellows/#:~:text=Sheila%20Gaynor%2C%20PhD-,Sarah%20Gerard%2C%20PhD,-Steven%20Gilhool%2C%20PhD
+# https://biodatacatalyst.nhlbi.nih.gov/about/bdc-fellows/#:~:text=Xuefang%20Zhao%2C%20PhD-,Yonghua%20Zhuang%2C%20PhD,-Since%20the%20conclusion
+
+
+def get_fellow_files(fellow_dir, root_dir, base_url = None, remote_file_dir = None):
     fellows = []
     # Get all .md files in the directory
     md_files = glob.glob(os.path.join(fellow_dir, "*.md"))
@@ -45,6 +55,11 @@ def get_fellow_files(fellow_dir, root_dir):
     for file_path in tqdm(md_files, desc="Reading fellow files"):
         fellow_data = parse_fellow_files(file_path, root_dir)
         if fellow_data:
+            if remote_file_dir and 'relative_file_path' in fellow_data:
+                fellow_data['remote_file_path'] = remote_file_dir + fellow_data['relative_file_path']
+            if base_url and 'name' in fellow_data:
+                fellow_data['page_url'] = base_url + "about/bdc-fellows/#:~:text=" + quote(fellow_data['name'])
+                
             fellows.append({"metadata": fellow_data, "content": json.dumps(fellow_data, indent=4)})
                 
     return fellows
@@ -67,6 +82,7 @@ def parse_simple_mdx_files(file_path, root_dir):
         markdown_content = parts[2].strip()
         
         metadata['file_path'] = clean_path(file_path, root_dir)
+        metadata["relative_file_path"] = "/".join(metadata["file_path"].split("/")[1:])
         # print(metadata['file_path'])
         
         return metadata, markdown_content
@@ -76,7 +92,7 @@ def parse_simple_mdx_files(file_path, root_dir):
         return None, None
 
 
-def get_data_mdx_files(updates_dir, root_dir):
+def get_data_mdx_files(updates_dir, root_dir, base_url = None, remote_file_dir = None):
     """Get all MDX files directly under the directory and index.mdx from subdirectories.
     """
     # paths = []
@@ -93,6 +109,13 @@ def get_data_mdx_files(updates_dir, root_dir):
         metadata, content = parse_simple_mdx_files(file_path, root_dir)
         if metadata and content:  # Only add if parsing was successful
             # paths.append(file_path)
+            if base_url and 'path' in metadata:
+                # remove the leading /
+                metadata['page_url'] = base_url + metadata['path'].lstrip('/')
+            if remote_file_dir and 'relative_file_path' in metadata:
+                metadata['remote_file_path'] = remote_file_dir + metadata['relative_file_path']
+            
+            
             res.append({"metadata": metadata, "content": content})
 
     return res
@@ -154,30 +177,45 @@ def clean_mdx(file_path):
 
 def get_all_mdx_paths(pages_dir, page_dir_paths, page_file_paths):
     all_paths = []
+    relative_paths = []  # New list for relative paths
     
     # Process directory paths (get mdx files directly under it)
     for dir_path in page_dir_paths:
         full_dir_path = os.path.join(pages_dir, dir_path)
         if os.path.exists(full_dir_path):
+            
             # Get immediate files in the directory
             for file in os.listdir(full_dir_path):
                 if file.endswith('.mdx'):
-                    all_paths.append(os.path.join(full_dir_path, file))
+                    full_path = os.path.join(full_dir_path, file)
+                    relative_path = os.path.join(dir_path, file)  # Create relative path
+                    all_paths.append(full_path)
+                    relative_paths.append(relative_path)
     
     # Process individual file paths
     for file_path in page_file_paths:
         full_file_path = os.path.join(pages_dir, file_path)
         if os.path.exists(full_file_path):
             all_paths.append(full_file_path)
+            relative_paths.append(file_path)  # Add original file path as relative path
     
-    return all_paths
+    return all_paths, relative_paths
 
 
 
 
-
-
-
+def paths_to_urls(base_url, file_paths):
+    urls = []
+    for path in file_paths:
+        
+        clean_path = path.replace('.mdx', '')
+        
+        clean_path = re.sub(r'/index$', '', clean_path)
+        
+        full_url = f"{base_url.rstrip('/')}/{clean_path}"
+        urls.append(full_url)
+    
+    return urls
 
 
 

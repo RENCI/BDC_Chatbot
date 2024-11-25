@@ -72,31 +72,15 @@ from langchain_community.embeddings import OllamaEmbeddings
 
 
 
-from rag.chain import rag_chain_constructor, construct_time_filter
-from utils import set_emb_llm
+from src.rag.chain import rag_chain_constructor, construct_time_filter
+from src.utils import set_emb_llm
 
 
 from collections import defaultdict
 
 from langchain.load.dump import dumps
 
-
-
-st.set_page_config(
-    page_title="BDC Bot",
-    page_icon="static/bot-light-32x32.png"
-)
-
-
-with open( "style.css" ) as css:
-    st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
-    
-
-logo = "static/bdc-bot-logo-2.png"
-bot_icon = "static/bot-32x32.png"
-user_icon = "static/user-32x32.png"
-
-
+import json
 @st.cache_resource
 def init_vars(retriever_top_k = 5, default_rag_filter = None):
     emb, llm, DB_PATH = set_emb_llm()
@@ -161,6 +145,11 @@ def parse_text(answer, context) -> str:
     titles = []
     contents = []
     
+    
+    metadatas = []
+    
+    
+    
     if not docs:
         return output
     
@@ -174,6 +163,9 @@ def parse_text(answer, context) -> str:
         if not source in sources:
             doc_type = doc.metadata['doc_type']
             sources.append(source)
+            metadatas.append(doc.metadata)
+            contents.append(doc.page_content)
+            
             if 'title' in doc.metadata:
                 titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['title']}")
             elif 'name' in doc.metadata:
@@ -183,24 +175,30 @@ def parse_text(answer, context) -> str:
                 titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['page_url'].split('/')[-1]}")
             else:
                 titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['file_path']}")
-            contents.append(doc.page_content)
+            
 
+    
+    
+    
+    
 
-    output += "\n###### "
     if len(sources) == 1:
-        output += "Source:\n"
+        output += "\n\n#### Source:\n"
     elif len(sources) > 1:
-        output += "Sources:\n"
+        output += "\n\n#### Sources:\n"
 
     for i, source in enumerate(sources):
-        # remove interim-bdc-website/ from the source path
-        # path = source.replace("interim-bdc-website/", "")
-        # output += f"###### {i + 1}. [{titles[i]}](https://github.com/stagecc/interim-bdc-website/tree/main/{path})\n\n"
+        output += f"###### {i + 1}. [{titles[i]}]({source})\n"
+
+        metadata_str = json.dumps(metadatas[i], indent=4)
+        # output += f"""<details>\n<summary markdown="span">Metadata</summary>\n```json\n{metadata_str}\n```\n</details>\n\n"""
+        output += f"<details>\n<summary>Metadata</summary>\n<p>{metadata_str}</p>\n</details>\n\n"
         
-        output += f"###### {i + 1}. [{titles[i]}]({source})\n\n"
-        # output += f"```\n{contents[i][:100]}\n```\n\n\n"
 
-
+        output += f"<details>\n<summary>Content</summary>\n<p>{contents[i]}</p>\n</details>\n\n"
+        
+    # print("\n\n\n"+output[:1000]+"\n\n\n")
+    
     return output
 
 
@@ -215,8 +213,8 @@ def parse_text(answer, context) -> str:
 
 
 # Set the title for the Streamlit app
-#st.title("BDC Bot")
-st.image(logo, width=200)
+st.title("BioData Catalyst Chatbot")
+
 
 
 # Initialize chat history
@@ -244,14 +242,14 @@ if prompt := st.chat_input("Ask a question"):
     
     for i in range(len(st.session_state['displayed_history'])):
         role, content = st.session_state['displayed_history'][i]
-        st.chat_message(role, avatar=user_icon if role == "user" else bot_icon).write(content)
+        st.chat_message(role).write(content)
     
     
     
-    with st.chat_message("user", avatar=user_icon):
+    with st.chat_message("user"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar=bot_icon):
+    with st.chat_message("assistant"):
         container = st.empty()
 
         
@@ -279,7 +277,7 @@ if prompt := st.chat_input("Ask a question"):
         # display_text = parse_message(stream)
         answer = display_text
         display_text = parse_text(answer, context)
-        container.markdown(display_text)
+        container.markdown(display_text, unsafe_allow_html=True)
 
 
         
