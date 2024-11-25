@@ -1,0 +1,21 @@
+streaming: True
+
+
+models:
+  - type: main
+    engine: vllm_openai
+    parameters:
+      base_url: http://localhost:8080/v1
+      temperature: 0.0
+      model_name: meta-llama/Meta-Llama-3.1-8B-Instruct
+
+
+
+rails:
+  input:
+    flows:
+      - self check input
+
+  # output:
+  #   flows:
+  #     - self check output

@@ -72,15 +72,15 @@ from langchain_community.embeddings import OllamaEmbeddings
 
 
 
-from rag.chain import rag_chain_constructor, construct_time_filter
-from utils import set_emb_llm
+from src.rag.chain import rag_chain_constructor, construct_time_filter
+from src.utils import set_emb_llm
 
 
 from collections import defaultdict
 
 from langchain.load.dump import dumps
 
-
+import json
 @st.cache_resource
 def init_vars(retriever_top_k = 5, default_rag_filter = None):
     emb, llm, DB_PATH = set_emb_llm()
@@ -145,6 +145,11 @@ def parse_text(answer, context) -> str:
     titles = []
     contents = []
     
+    
+    metadatas = []
+    
+    
+    
     if not docs:
         return output
     
@@ -158,6 +163,9 @@ def parse_text(answer, context) -> str:
         if not source in sources:
             doc_type = doc.metadata['doc_type']
             sources.append(source)
+            metadatas.append(doc.metadata)
+            contents.append(doc.page_content)
+            
             if 'title' in doc.metadata:
                 titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['title']}")
             elif 'name' in doc.metadata:
@@ -167,8 +175,12 @@ def parse_text(answer, context) -> str:
                 titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['page_url'].split('/')[-1]}")
             else:
                 titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['file_path']}")
-            contents.append(doc.page_content)
+            
 
+    
+    
+    
+    
 
     if len(sources) == 1:
         output += "\n\n#### Source:\n"
@@ -176,13 +188,17 @@ def parse_text(answer, context) -> str:
         output += "\n\n#### Sources:\n"
 
     for i, source in enumerate(sources):
-        # remove interim-bdc-website/ from the source path
-        # path = source.replace("interim-bdc-website/", "")
-        # output += f"###### {i + 1}. [{titles[i]}](https://github.com/stagecc/interim-bdc-website/tree/main/{path})\n\n"
-        
-        output += f"###### {i + 1}. [{titles[i]}]({source})\n\n"
-        # output += f"```\n{contents[i][:100]}\n```\n\n\n"
+        output += f"###### {i + 1}. [{titles[i]}]({source})\n"
 
+        metadata_str = json.dumps(metadatas[i], indent=4)
+        # output += f"""<details>\n<summary markdown="span">Metadata</summary>\n```json\n{metadata_str}\n```\n</details>\n\n"""
+        output += f"<details>\n<summary>Metadata</summary>\n<p>{metadata_str}</p>\n</details>\n\n"
+        
+
+        output += f"<details>\n<summary>Content</summary>\n<p>{contents[i]}</p>\n</details>\n\n"
+        
+    # print("\n\n\n"+output[:1000]+"\n\n\n")
+    
     return output
 
 
@@ -261,7 +277,7 @@ if prompt := st.chat_input("Ask a question"):
         # display_text = parse_message(stream)
         answer = display_text
         display_text = parse_text(answer, context)
-        container.markdown(display_text)
+        container.markdown(display_text, unsafe_allow_html=True)
 
 
         
