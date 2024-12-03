@@ -138,6 +138,7 @@ Keep the answer concise, prioritize using 1 paragraph, and include the most rele
 You can use bullet points and markdown formatting if either is needed.\
 The context are retrieved based on the user query and the chat history.\
 If there is context provided, answer the question based on the context.\
+Use the term 'documentation' instead of context in your repsponses.\
 
 ### context: {context}"""
     
