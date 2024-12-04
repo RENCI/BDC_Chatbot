@@ -238,8 +238,12 @@ if prompt := st.chat_input("Ask a question"):
 
     
     for i in range(len(st.session_state['displayed_history'])):
-        role, content = st.session_state['displayed_history'][i]
-        st.chat_message(role, avatar=user_icon if role == "user" else bot_icon).write(content)
+        role, content, sources = st.session_state['displayed_history'][i]
+        with st.chat_message(role, avatar=user_icon if role == "user" else bot_icon):
+            st.markdown(content)
+
+            if sources:
+                 draw_sources(sources)
     
     
     
@@ -293,8 +297,8 @@ if prompt := st.chat_input("Ask a question"):
 
     # st.session_state.messages.append({"role": "assistant", "content": response})
     
-    st.session_state['displayed_history'].append(('user', prompt))
-    st.session_state['displayed_history'].append(('assistant', display_text))
+    st.session_state['displayed_history'].append(('user', prompt, None))
+    st.session_state['displayed_history'].append(('assistant', display_text, sources))
 
 
 
