@@ -85,7 +85,17 @@ from langchain.load.dump import dumps
 import json
 
 
-st.set_page_config(page_title="BioData Catalyst Chatbot")
+st.set_page_config(
+    page_title="BDC Bot",
+    page_icon="static/bot-light-32x32.png"
+)
+
+with open( "style.css" ) as css:
+    st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
+
+logo = "static/bdc-bot-logo-2.png"
+bot_icon = "static/bot-32x32.png"
+user_icon = "static/user-32x32.png"
 
 # <p id="p1"><a href="https://cnet.com">Cnet</a></p>
 # <p id="p2"><a href="https://codegena.com">Codegena</a></p>
@@ -182,6 +192,30 @@ doc_type_dict['event'] = "BDC Event"
 
 
 
+def filter_sources(docs):
+    # sort docs by score
+    #docs = sorted(docs, key=lambda x: x.metadata["score"], reverse=True)
+    
+    
+    # Split by the maximum distance between scores
+    # XXX: Could use something more sophisticated such as Otsu thresholding...
+    max_diff = 0
+    max_diff_index = 0
+    for i in range(len(docs)-1):        
+        diff = docs[i+1].metadata["score"] - docs[i].metadata["score"]
+
+        print(diff)
+
+        if (diff > max_diff):
+            max_diff = diff
+            max_diff_index = i
+
+    print(max_diff, max_diff_index)
+
+    top_docs = docs[0:max_diff_index+1]
+
+    return top_docs
+
 
 def parse_text(answer, context) -> str:
 
@@ -191,122 +225,91 @@ def parse_text(answer, context) -> str:
     
     output = answer
     docs = context
-    
-    sources = []
-    titles = []
-    contents = []
-    
-    
-    metadatas = []
-    
-    # sort docs by score
-    docs = sorted(docs, key=lambda x: x.metadata["score"], reverse=True)
-    
-    
-    
-    score_diff = []
-    for i in range(len(docs)-1):
-        score_diff.append(docs[i].metadata["score"] - docs[i+1].metadata["score"])
-    
-    max_score_diff = max(score_diff)
-    max_score = max([d.metadata["score"] for d in docs])
-    
-    print("max_score_diff: ", max_score_diff)
-    print("max_score: ", max_score)
-    
 
-    
-    
     if not docs:
         return output
     
+    sources = []    
     
-    # get docs with max score - max score diff
-    top_docs = [docs[i] for i in range(len(docs)) if docs[i].metadata["score"] >= max_score - max_score_diff]
-    
-    # at least 1 doc
-    if len(top_docs) == 0:
-        top_docs = [docs[0],]
-    
+    top_docs = filter_sources(docs)
     
     for doc in top_docs:
+        url = ""
+
         # source = doc.metadata["file_path"]
         if 'page_url' in doc.metadata:
-            source = doc.metadata['page_url']
-        else:
-            source = doc.metadata['remote_file_path']      
+            url = doc.metadata['page_url']
+        elif 'remote_file_path' in doc.metadata:
+            url = doc.metadata['remote_file_path'] 
         
-        if not source in sources:
-            doc_type = doc.metadata['doc_type']
-            sources.append(source)
-            metadatas.append(doc.metadata)
-            contents.append(doc.page_content)
+        if not any(source.get('url') == url for source in sources):
+            source = {
+                'url': url,
+                'doc_type': doc.metadata['doc_type'],    
+                'metadata': doc.metadata,
+                'content': doc.page_content,
+                'score': doc.metadata['score']   
+            }
             
             if 'title' in doc.metadata:
-                titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['title']}")
+                source['title'] = doc.metadata['title']
             elif 'name' in doc.metadata:
-                titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['name']}")
+                source['title'] = doc.metadata['name']
             elif 'page_url' in doc.metadata:
                 # only use the last part of the page_url
-                titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['page_url'].split('/')[-1]}")
+                source['title'] = doc.metadata['page_url'].split('/')[-1]
             else:
-                titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['file_path']}")
+                source['title'] = doc.metadata['file_path']
+            
+            sources.append(source)
+
+    return output, sources
+
+
+
+def draw_sources(sources, showSources):
+    if len(sources) == 0: 
+        return    
+    
+    print("NUM:", len(sources))
+
+    with st.expander(f"Source{'s' if len(sources) > 1 else ''}", expanded=showSources):
+        output = ""
+
+        for i, source in enumerate(sources):                    
+            # Add the link
+            output += f'###### {i + 1}. <a href="{source["url"]}" class="web_preview">{source["title"]}</a>\n'
+            
+            # Add a small preview using st.image in an expander
+            if source['url'].startswith(('http://', 'https://')):
+                output += f"""<details>
+                    <summary>Preview</summary>
+                    <img src="https://api.microlink.io?url={source["url"]}&screenshot=true&embed=screenshot.url" width="300">
+                    </details>\n"""
+            # # Update the link format to include the preview image
+            # if source.startswith(('http://', 'https://')):
+            #     preview_url = f"https://api.microlink.io?url={source}&screenshot=true&embed=screenshot.url"
+            #     output += f'###### {i + 1}. <a href="{source}" title="Preview" data-preview="{preview_url}">{titles[i]}</a>\n'
+            # else:
+            #     output += f'###### {i + 1}. <a href="{source}">{titles[i]}</a>\n'
+
+
+
+            metadata_str = json.dumps(source['metadata'], indent=4)
+            # output += f"""<details>\n<summary markdown="span">Metadata</summary>\n```json\n{metadata_str}\n```\n</details>\n\n"""
+            output += f"<details>\n<summary>Metadata</summary>\n<p>{metadata_str}</p>\n</details>\n\n"
             
 
-    
-    
-    
-    
+            output += f"<details>\n<summary>Content</summary>\n<p>{source['content']}</p>\n</details>\n\n"
 
-    if len(sources) == 1:
-        output += "\n\n#### Source:\n"
-    elif len(sources) > 1:
-        output += "\n\n#### Sources:\n"
-
-    for i, source in enumerate(sources):
-        # Add the link
-        output += f'###### {i + 1}. <a href="{source}" class="web_preview">{titles[i]}</a>\n'
-        
-        # Add a small preview using st.image in an expander
-        if source.startswith(('http://', 'https://')):
-            output += f"""<details>
-                <summary>Preview</summary>
-                <img src="https://api.microlink.io?url={source}&screenshot=true&embed=screenshot.url" width="300">
-                </details>\n"""
-        # # Update the link format to include the preview image
-        # if source.startswith(('http://', 'https://')):
-        #     preview_url = f"https://api.microlink.io?url={source}&screenshot=true&embed=screenshot.url"
-        #     output += f'###### {i + 1}. <a href="{source}" title="Preview" data-preview="{preview_url}">{titles[i]}</a>\n'
-        # else:
-        #     output += f'###### {i + 1}. <a href="{source}">{titles[i]}</a>\n'
-
-
-
-        metadata_str = json.dumps(metadatas[i], indent=4)
-        # output += f"""<details>\n<summary markdown="span">Metadata</summary>\n```json\n{metadata_str}\n```\n</details>\n\n"""
-        output += f"<details>\n<summary>Metadata</summary>\n<p>{metadata_str}</p>\n</details>\n\n"
-        
-
-        output += f"<details>\n<summary>Content</summary>\n<p>{contents[i]}</p>\n</details>\n\n"
-        
-    # print("\n\n\n"+output[:1000]+"\n\n\n")
-    
-    return output
-
-
-
-
-
-
-
-
-
+            st.markdown(output, unsafe_allow_html=True)
 
 
 
 # Set the title for the Streamlit app
-st.title("BioData Catalyst Chatbot")
-
+#st.title("BDC Bot")
+st.image(logo, width=200)
+#st.logo(logo)
 
 
 # Initialize chat history
@@ -333,15 +336,19 @@ if prompt := st.chat_input("Ask a question"):
 
     
     for i in range(len(st.session_state['displayed_history'])):
-        role, content = st.session_state['displayed_history'][i]
-        st.chat_message(role).markdown(content, unsafe_allow_html=True)
+        role, content, sources = st.session_state['displayed_history'][i]
+        with st.chat_message(role, avatar=user_icon if role == "user" else bot_icon):
+            st.markdown(content)
+
+            if sources:
+                 draw_sources(sources, False)
     
     
     
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=user_icon):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=bot_icon):
         container = st.empty()
 
         
@@ -368,10 +375,10 @@ if prompt := st.chat_input("Ask a question"):
         
         # display_text = parse_message(stream)
         answer = display_text
-        display_text = parse_text(answer, context)
+        display_text, sources = parse_text(answer, context)
         container.markdown(display_text, unsafe_allow_html=True)
 
-
+        draw_sources(sources, True)
         
         # result = conversational_chat(prompt)
         # answer = result["answer"]
@@ -389,8 +396,8 @@ if prompt := st.chat_input("Ask a question"):
 
     # st.session_state.messages.append({"role": "assistant", "content": response})
     
-    st.session_state['displayed_history'].append(('user', prompt))
-    st.session_state['displayed_history'].append(('assistant', display_text))
+    st.session_state['displayed_history'].append(('user', prompt, None))
+    st.session_state['displayed_history'].append(('assistant', display_text, sources))
 
 
 
