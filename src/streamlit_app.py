@@ -158,65 +158,60 @@ def parse_text(answer, context) -> str:
     docs = context
     
     sources = []
-    titles = []
-    contents = []
     
     if not docs:
         return output
     
     for doc in docs:
+        url = ""
+
         # source = doc.metadata["file_path"]
         if 'page_url' in doc.metadata:
-            source = doc.metadata['page_url']
-        else:
-            source = doc.metadata['remote_file_path']      
+            url = doc.metadata['page_url']
+        elif 'remote_file_path' in doc.metadata:
+            url = doc.metadata['remote_file_path']
         
-        if not source in sources:
-            doc_type = doc.metadata['doc_type']
-            sources.append(source)
+        if not any(source.get('url') == url for source in sources):
+            source = {
+                'url': url,
+                'doc_type': doc.metadata['doc_type'],                
+            }
+
             if 'title' in doc.metadata:
-                titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['title']}")
+                source['title'] = doc.metadata['title']
             elif 'name' in doc.metadata:
-                titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['name']}")
+                source['title'] = doc.metadata['name']
             elif 'page_url' in doc.metadata:
                 # only use the last part of the page_url
-                titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['page_url'].split('/')[-1]}")
+                source['title'] = doc.metadata['page_url'].split('/')[-1]
             else:
-                titles.append(f"{doc_type_dict[doc_type]}: {doc.metadata['file_path']}")
-            contents.append(doc.page_content)
+                source['title'] = doc.metadata['file_path']
+
+            source['similarity_score'] = doc.metadata['similarity_score']
+
+            sources.append(source)
+
+    return output, sources
 
 
-    output += "\n###### "
-    if len(sources) == 1:
-        output += "Source:\n"
-    elif len(sources) > 1:
-        output += "Sources:\n"
+def draw_sources(sources):
+    print(sources)
 
-    for i, source in enumerate(sources):
-        # remove interim-bdc-website/ from the source path
-        # path = source.replace("interim-bdc-website/", "")
-        # output += f"###### {i + 1}. [{titles[i]}](https://github.com/stagecc/interim-bdc-website/tree/main/{path})\n\n"
-        
-        output += f"###### {i + 1}. [{titles[i]}]({source})\n\n"
-        # output += f"```\n{contents[i][:100]}\n```\n\n\n"
+    if len(sources) == 0: 
+        return    
 
+    with st.expander(f"Generated from {len(sources)} source{'s' if len(sources) > 1 else ''}"):
+        output = ""
 
-    return output
+        for i, source in enumerate(sources):                    
+            output += f"###### {i + 1}. [{source['doc_type']}: {source['title']}]({source['url']})\n\n"
 
-
-
-
-
-
-
-
-
-
-
+        st.markdown(output)
 
 # Set the title for the Streamlit app
 #st.title("BDC Bot")
 st.image(logo, width=200)
+#st.logo(logo)
 
 
 # Initialize chat history
@@ -243,8 +238,12 @@ if prompt := st.chat_input("Ask a question"):
 
     
     for i in range(len(st.session_state['displayed_history'])):
-        role, content = st.session_state['displayed_history'][i]
-        st.chat_message(role, avatar=user_icon if role == "user" else bot_icon).write(content)
+        role, content, sources = st.session_state['displayed_history'][i]
+        with st.chat_message(role, avatar=user_icon if role == "user" else bot_icon):
+            st.markdown(content)
+
+            if sources:
+                 draw_sources(sources)
     
     
     
@@ -278,17 +277,16 @@ if prompt := st.chat_input("Ask a question"):
         
         # display_text = parse_message(stream)
         answer = display_text
-        display_text = parse_text(answer, context)
+        display_text, sources = parse_text(answer, context)
         container.markdown(display_text)
 
-
+        draw_sources(sources)
         
         # result = conversational_chat(prompt)
         # answer = result["answer"]
         # display_text = parse_text(answer, result["context"])
         
         # container.markdown(display_text)
-        
 
 
     
@@ -299,8 +297,8 @@ if prompt := st.chat_input("Ask a question"):
 
     # st.session_state.messages.append({"role": "assistant", "content": response})
     
-    st.session_state['displayed_history'].append(('user', prompt))
-    st.session_state['displayed_history'].append(('assistant', display_text))
+    st.session_state['displayed_history'].append(('user', prompt, None))
+    st.session_state['displayed_history'].append(('assistant', display_text, sources))
 
 
 
