@@ -16,7 +16,7 @@ from langchain.chains.query_constructor.ir import (
 )
 # from langchain.retrievers.self_query.chroma import ChromaTranslator
 from langchain_community.query_constructors.chroma import ChromaTranslator
-
+from langchain_core.documents import Document
 
 
 from pydantic import BaseModel, Field, field_validator
@@ -38,10 +38,9 @@ guardrails = RunnableRails(config, verbose=True, output_key="answer")
 
 
 
-# from langchain_core.runnables import chain
-from typing import List
 
-from langchain_core.documents import Document
+from typing import List
+# from langchain_core.runnables import chain
 # @chain
 # def retriever(query: str) -> List[Document]:
 #     docs, scores = zip(*vectorstore.similarity_search_with_score(query))
@@ -56,12 +55,52 @@ from typing import Any, Dict
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores.base import VectorStoreRetriever, VectorStore
 
+# class RetrieverWithScore(VectorStoreRetriever):
+#     # init with vectorstore
+#     def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
+#         """Initialize with vectorstore."""
+#         super().__init__(vectorstore=vectorstore, **kwargs)
+    
+    
+#     def _get_docs_with_query(
+#         self, query: str, search_kwargs: Dict[str, Any]
+#     ) -> List[Document]:
+#         """Get docs, adding score information."""
+#         # docs, scores = zip(
+#         #     *self.vectorstore.similarity_search_with_relevance_scores(query, **search_kwargs)
+#         # )
+#         docs, scores = zip(
+#             *self.vectorstore.similarity_search_with_score(query, **search_kwargs)
+#         )
+        
+        
+#         for doc, score in zip(docs, scores):
+#             doc.metadata["score"] = score
+
+#         # print("\t\t# of docs: ", len(docs))
+#         # print(docs)
+#         # # sort by score highest to lowest
+#         # docs = sorted(docs, key=lambda x: x.metadata["score"], reverse=True)
+        
+#         # # search_kwargs, filter by score_threshold, with at least 1 doc
+#         # new_docs = [doc for doc in docs if doc.metadata["score"] >= search_kwargs["score_threshold"]]
+#         # if len(new_docs) == 0:
+#         #     # pick the highest scoring doc
+#         #     new_docs = [docs[0],]
+        
+#         # print("\t\t# of docs: ", len(new_docs))
+#         # return new_docs
+        
+        
+#         return docs
+
+
 class RetrieverWithScore(VectorStoreRetriever):
     # init with vectorstore
     def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
         """Initialize with vectorstore."""
         super().__init__(vectorstore=vectorstore, **kwargs)
-    
+        print(self.__dict__)
     
     def _get_docs_with_query(
         self, query: str, search_kwargs: Dict[str, Any]
@@ -71,23 +110,14 @@ class RetrieverWithScore(VectorStoreRetriever):
             *self.vectorstore.similarity_search_with_score(query, **search_kwargs)
         )
         for doc, score in zip(docs, scores):
-            doc.metadata["similarity_score"] = score
+            doc.metadata["score"] = score
 
         return docs
-    
+
     def _get_relevant_documents(
         self, query: str, *, run_manager: Any = None, **kwargs: Any
     ) -> List[Document]:
-        """Get documents relevant to a query.
-        
-        Args:
-            query: String to find relevant documents for
-            run_manager: Optional callback manager
-            **kwargs: Additional parameters to pass to similarity search
-        
-        Returns:
-            List of relevant documents
-        """
+
         return self._get_docs_with_query(query, kwargs)
 
 
@@ -104,9 +134,14 @@ def get_summary(text: str, llm):
 
 
 
-def rag_chain_constructor(retriever, llm, vectorstore: VectorStore = None):
+def rag_chain_constructor(retriever, llm, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5):
     if vectorstore is not None:
-        retriever = RetrieverWithScore(vectorstore)
+        print("using RetrieverWithScore")
+        # retriever = RetrieverWithScore(vectorstore, search_type="similarity_score_threshold", search_kwargs={'score_threshold': score_threshold,'k':retriever_top_k})
+        retriever = RetrieverWithScore(vectorstore, search_kwargs={'k':retriever_top_k})
+    
+    
+    
     
     
 
