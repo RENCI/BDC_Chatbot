@@ -97,6 +97,10 @@ logo = "static/bdc-bot-logo-2.png"
 bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
 
+
+
+
+
 # <p id="p1"><a href="https://cnet.com">Cnet</a></p>
 # <p id="p2"><a href="https://codegena.com">Codegena</a></p>
 # <p id="p3"><a href="https://apple.com">Apple</a></p>
@@ -276,6 +280,8 @@ def draw_sources(sources, showSources):
     with st.expander(f"Source{'s' if len(sources) > 1 else ''}", expanded=showSources):
         output = ""
 
+        print(len(sources))
+        
         for i, source in enumerate(sources):                    
             # Add the link
             output += f'###### {i + 1}. <a href="{source["url"]}" class="web_preview">{source["title"]}</a>\n'
@@ -284,7 +290,7 @@ def draw_sources(sources, showSources):
             if source['url'].startswith(('http://', 'https://')):
                 output += f"""<details>
                     <summary>Preview</summary>
-                    <img src="https://api.microlink.io?url={source["url"]}&screenshot=true&embed=screenshot.url" width="300">
+                    <img src="https://api.microlink.io?url={source["url"]}&screenshot=true&embed=screenshot.url" >
                     </details>\n"""
             # # Update the link format to include the preview image
             # if source.startswith(('http://', 'https://')):
@@ -302,7 +308,7 @@ def draw_sources(sources, showSources):
 
             output += f"<details>\n<summary>Content</summary>\n<p>{source['content']}</p>\n</details>\n\n"
 
-            st.markdown(output, unsafe_allow_html=True)
+        st.markdown(output, unsafe_allow_html=True)
 
 
 
