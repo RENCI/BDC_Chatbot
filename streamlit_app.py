@@ -218,7 +218,8 @@ def filter_sources(docs):
 
     top_docs = docs[0:max_diff_index+1]
 
-    return top_docs
+    #return top_docs
+    return docs
 
 
 def parse_text(answer, context) -> str:
@@ -231,7 +232,7 @@ def parse_text(answer, context) -> str:
     docs = context
 
     if not docs:
-        return output
+        return output, []
     
     sources = []    
     
