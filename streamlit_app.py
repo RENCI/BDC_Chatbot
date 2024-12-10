@@ -200,7 +200,6 @@ def filter_sources(docs):
     # sort docs by score
     #docs = sorted(docs, key=lambda x: x.metadata["score"], reverse=True)
     
-    
     # Split by the maximum distance between scores
     # XXX: Could use something more sophisticated such as Otsu thresholding...
     max_diff = 0
@@ -208,18 +207,15 @@ def filter_sources(docs):
     for i in range(len(docs)-1):        
         diff = docs[i+1].metadata["score"] - docs[i].metadata["score"]
 
-        print(diff)
-
         if (diff > max_diff):
             max_diff = diff
             max_diff_index = i
 
-    print(max_diff, max_diff_index)
-
     top_docs = docs[0:max_diff_index+1]
 
-    #return top_docs
-    return docs
+    print(f"Kept {len(top_docs)} of {len(docs)}")
+
+    return top_docs
 
 
 def parse_text(answer, context) -> str:
@@ -275,13 +271,9 @@ def parse_text(answer, context) -> str:
 def draw_sources(sources, showSources):
     if len(sources) == 0: 
         return    
-    
-    print("NUM:", len(sources))
 
     with st.expander(f"Source{'s' if len(sources) > 1 else ''}", expanded=showSources):
         output = ""
-
-        print(len(sources))
         
         for i, source in enumerate(sources):                    
             # Add the link

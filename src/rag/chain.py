@@ -107,7 +107,7 @@ class RetrieverWithScore(VectorStoreRetriever):
     ) -> List[Document]:
         """Get docs, adding score information."""
         docs, scores = zip(
-            *self.vectorstore.similarity_search_with_score(query, **search_kwargs)
+            *self.vectorstore.similarity_search_with_score(query, **self.search_kwargs)
         )
         for doc, score in zip(docs, scores):
             doc.metadata["score"] = score
