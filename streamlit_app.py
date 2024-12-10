@@ -175,11 +175,6 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None):
 
 
 
-
-
-
-
-
 llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=10)
 
 
@@ -268,6 +263,76 @@ def parse_text(answer, context) -> str:
 
 
 
+
+# Function to display the image on hover
+def link_with_preview_on_hover(url, text, i):
+    image_url = f"https://api.microlink.io?url={url}&screenshot=true&embed=screenshot.url"
+    
+    
+    # Generate unique class names for each image
+    hover_class = f'hoverable_{i}'
+    tooltip_class = f'tooltip_{i}'
+    image_popup_class = f'image-popup_{i}'
+
+    # Define the unique CSS for each image
+    hover_css = f'''
+        .{hover_class} {{
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }}
+        .{hover_class} .{tooltip_class} {{
+            opacity: 0;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: opacity 0.5s;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 4px;
+            border-radius: 4px;
+            text-align: center;
+            white-space: nowrap;
+        }}
+        .{hover_class}:hover .{tooltip_class} {{
+            opacity: 1;
+        }}
+        .{image_popup_class} {{
+            position: absolute;
+            display: none;
+            background-image: none;
+            width: 350px;
+            height: 200px;
+        }}
+        .{hover_class}:hover .{image_popup_class} {{
+            display: block;
+            background-image: url({image_url});
+            background-size: cover;
+            z-index: 999;
+        }}
+    '''
+    tooltip_css = f"<style>{hover_css}</style>"
+
+    # Define the html for each image
+    image_hover = f'''
+        <div class="{hover_class}">
+            <a href="{url}">{text}</a>
+            <div class="{tooltip_class}">{url}</div>
+            <div class="{image_popup_class}"></div>
+        </div>
+    '''
+    
+    # Write the dynamic HTML and CSS to the content container
+    st.markdown(f'<p>{image_hover}{tooltip_css}</p>', unsafe_allow_html=True)
+
+
+
+
+
+
+
+
 def draw_sources(sources, showSources):
     if len(sources) == 0: 
         return    
@@ -276,32 +341,17 @@ def draw_sources(sources, showSources):
         output = ""
         
         for i, source in enumerate(sources):                    
-            # Add the link
-            output += f'###### {i + 1}. <a href="{source["url"]}" class="web_preview">{source["title"]}</a>\n'
+            output = ""                  
+
+            link_with_preview_on_hover(source['url'], source['title'], i)
             
-            # Add a small preview using st.image in an expander
-            if source['url'].startswith(('http://', 'https://')):
-                output += f"""<details>
-                    <summary>Preview</summary>
-                    <img src="https://api.microlink.io?url={source["url"]}&screenshot=true&embed=screenshot.url" >
-                    </details>\n"""
-            # # Update the link format to include the preview image
-            # if source.startswith(('http://', 'https://')):
-            #     preview_url = f"https://api.microlink.io?url={source}&screenshot=true&embed=screenshot.url"
-            #     output += f'###### {i + 1}. <a href="{source}" title="Preview" data-preview="{preview_url}">{titles[i]}</a>\n'
-            # else:
-            #     output += f'###### {i + 1}. <a href="{source}">{titles[i]}</a>\n'
-
-
-
             metadata_str = json.dumps(source['metadata'], indent=4)
-            # output += f"""<details>\n<summary markdown="span">Metadata</summary>\n```json\n{metadata_str}\n```\n</details>\n\n"""
+
             output += f"<details>\n<summary>Metadata</summary>\n<p>{metadata_str}</p>\n</details>\n\n"
             
-
             output += f"<details>\n<summary>Content</summary>\n<p>{source['content']}</p>\n</details>\n\n"
 
-        st.markdown(output, unsafe_allow_html=True)
+            st.markdown(output, unsafe_allow_html=True)
 
 
 
