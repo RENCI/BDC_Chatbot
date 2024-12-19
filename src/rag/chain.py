@@ -27,6 +27,10 @@ from typing import Optional
 from datetime import datetime, timedelta, date
 
 
+from langchain_core.output_parsers import StrOutputParser
+
+
+
 
 
 
@@ -40,14 +44,7 @@ guardrails = RunnableRails(config, verbose=True, output_key="answer")
 
 
 from typing import List
-# from langchain_core.runnables import chain
-# @chain
-# def retriever(query: str) -> List[Document]:
-#     docs, scores = zip(*vectorstore.similarity_search_with_score(query))
-#     for doc, score in zip(docs, scores):
-#         doc.metadata["score"] = score
 
-#     return docs
 
 
 
@@ -55,44 +52,7 @@ from typing import Any, Dict
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores.base import VectorStoreRetriever, VectorStore
 
-# class RetrieverWithScore(VectorStoreRetriever):
-#     # init with vectorstore
-#     def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
-#         """Initialize with vectorstore."""
-#         super().__init__(vectorstore=vectorstore, **kwargs)
-    
-    
-#     def _get_docs_with_query(
-#         self, query: str, search_kwargs: Dict[str, Any]
-#     ) -> List[Document]:
-#         """Get docs, adding score information."""
-#         # docs, scores = zip(
-#         #     *self.vectorstore.similarity_search_with_relevance_scores(query, **search_kwargs)
-#         # )
-#         docs, scores = zip(
-#             *self.vectorstore.similarity_search_with_score(query, **search_kwargs)
-#         )
-        
-        
-#         for doc, score in zip(docs, scores):
-#             doc.metadata["score"] = score
 
-#         # print("\t\t# of docs: ", len(docs))
-#         # print(docs)
-#         # # sort by score highest to lowest
-#         # docs = sorted(docs, key=lambda x: x.metadata["score"], reverse=True)
-        
-#         # # search_kwargs, filter by score_threshold, with at least 1 doc
-#         # new_docs = [doc for doc in docs if doc.metadata["score"] >= search_kwargs["score_threshold"]]
-#         # if len(new_docs) == 0:
-#         #     # pick the highest scoring doc
-#         #     new_docs = [docs[0],]
-        
-#         # print("\t\t# of docs: ", len(new_docs))
-#         # return new_docs
-        
-        
-#         return docs
 
 
 class RetrieverWithScore(VectorStoreRetriever):
@@ -127,7 +87,12 @@ class RetrieverWithScore(VectorStoreRetriever):
 summary_prompt = ChatPromptTemplate.from_messages(
     [("system", "Write a concise summary of the following text in 1-3 sentences, return the summary ONLY, This is NOT a conversation. \\n\\n{text}")]
 )
-def get_summary(text: str, llm):
+def get_summary(text: str, llm, min_text=300):
+    if min_text is None:
+        min_text = 0
+    if len(text) < min_text:
+        return text
+    
     return (summary_prompt|llm).invoke({"text": text}).model_dump()['content']
 
 
@@ -285,6 +250,28 @@ def construct_time_filter(search_query: date_filter_params = None):
 
 
 
+
+def create_chunk_contextualizer_chain(llm):
+    
+    contextualize_prompt = ChatPromptTemplate.from_template(
+"""<document>
+{whole_document}
+</document>
+Here is the chunk we want to situate within the whole document
+<chunk>
+{chunk_content}
+</chunk>
+Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else.
+""")
+
+    # Chain components
+    chain = (
+        contextualize_prompt 
+        | llm 
+        | StrOutputParser()
+    )
+
+    return chain
 
 
 

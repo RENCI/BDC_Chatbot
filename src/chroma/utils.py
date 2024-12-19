@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 
 
-def loadPKL(file_path, doc_type, emb, llm = None, use_summary = False):
+def loadPKL(file_path, doc_type, emb, llm = None, use_summary = False, use_contextualized_chunk = True):
     with open(file_path, 'rb') as f:
         pkl_list = pickle.load(f)
     
@@ -21,13 +21,25 @@ def loadPKL(file_path, doc_type, emb, llm = None, use_summary = False):
     
     metadata = [dict(row['metadata'], doc_type=doc_type) for row in pkl_list]
     
-    if use_summary:
-        summaries = [get_summary(page_content, llm) for page_content in tqdm(page_contents, total=len(page_contents))]
-        metadata = [dict(metadata, summary=summary) for metadata, summary in zip(metadata, summaries)]
-    else:
-        summaries = page_contents
+    
+    text_to_embed = []
+    for i, (page_content, meta) in enumerate(zip(page_contents, metadata)):
+        if use_contextualized_chunk and 'contextualized_chunk' in meta:
+            text_to_embed.append(meta['contextualized_chunk'])
+        elif use_summary:
+            summary = get_summary(page_content, llm)
+            metadata[i] = dict(meta, summary=summary)
+            text_to_embed.append(summary)
+        else:
+            text_to_embed.append(page_content)
+    
+    # if use_summary:
+    #     summaries = [get_summary(page_content, llm) for page_content in tqdm(page_contents, total=len(page_contents))]
+    #     metadata = [dict(metadata, summary=summary) for metadata, summary in zip(metadata, summaries)]
+    # else:
+    #     summaries = page_contents
         
-    embeddings = emb.embed_documents(summaries)
+    embeddings = emb.embed_documents(text_to_embed)
 
     return page_contents, metadata, embeddings
     

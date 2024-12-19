@@ -3,7 +3,15 @@ from pathlib import Path
 from tqdm import tqdm
 import pickle
 
-from preproc.proc_BDC_repo import get_fellow_files, get_data_mdx_files, clean_mdx, get_all_mdx_paths, clean_path, paths_to_urls
+from .preproc.proc_BDC_repo import get_fellow_files, get_data_mdx_files, clean_mdx, get_all_mdx_paths, clean_path
+from .preproc.utils import contextualize_chunk, paths_to_urls, split_by_sections
+
+from .utils import set_emb_llm
+emb, llm, DB_PATH = set_emb_llm()
+
+
+
+
 
 
 # process data dir
@@ -102,18 +110,33 @@ pages_url = paths_to_urls(base_url, relative_paths)
 
 metadata_list = []
 page_content_list = []
+contextualized_chunk_list = []
 
 # print(len(mdx_paths), mdx_paths[0])
-for i, path in tqdm(enumerate(mdx_paths)):
+for i, path in tqdm(enumerate(mdx_paths), desc="Processing pages"):
     header, page_content = clean_mdx(path)
     header['file_path'] = clean_path(path, pages_dir)
     header['page_url'] = pages_url[i]
-    metadata_list.append(header)
-    page_content_list.append(page_content)
+    
+    section_list = split_by_sections(page_content)
+    
+    for section in section_list:
+        contextualized_chunk = contextualize_chunk(page_content, section, llm)
+        contextualized_chunk_list.append(contextualized_chunk)
+    
+    
+    metadata_list.extend([header]*len(section_list))
+    page_content_list.extend(section_list)
+
+for i in range(len(contextualized_chunk_list)):
+    metadata_list[i]['contextualized_chunk'] = contextualized_chunk_list[i]
+
+
+
 
 # Save pages data
 pages_data = []
-for metadata, content in tqdm(zip(metadata_list, page_content_list)):
+for metadata, content in tqdm(zip(metadata_list, page_content_list), desc="Processing pages (sections)"):
     if 'menu' in metadata.keys():
         metadata['headings'] = ', '.join([pair['heading'] for pair in metadata['menu']])
         metadata['hrefs'] = ', '.join([pair['href'] for pair in metadata['menu']])

@@ -27,7 +27,7 @@ Edit `.env` to match
 ## Create RAG database
 
 ```bash
-python ./src/preproc_doc.py                                         # preprocess BDC website repo
+python -m src.preproc_doc                                         # preprocess BDC website repo
 python -m src.prepare_chromadb                                      # create chroma db
 ```
 
