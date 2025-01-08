@@ -18,3 +18,11 @@ a {
 .stAppDeployButton {
     display: none;
 }
+
+/*
+hide fullscreen image button in top-right of images,
+which currently only applies to BDCbot logo image.
+*/
+.stElementContainer button {
+    display: none;
+}
