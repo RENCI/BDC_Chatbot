@@ -13,3 +13,8 @@ h1 {
 a {
     color: #3c718a !important;
 }
+
+/* hide DEPLOY button in top-right of UI */
+.stAppDeployButton {
+    display: none;
+}
