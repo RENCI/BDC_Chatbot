@@ -3,7 +3,14 @@ from ..rag.chain import create_chunk_contextualizer_chain
 
 
 
+def concat_paths(*paths):
+    result = paths[0].rstrip('/') if paths else ''
 
+    for path in paths[1:]:
+        path = path.lstrip('/')
+        result = f"{result}/{path}"
+
+    return result
 
 
 
@@ -68,11 +75,19 @@ def split_by_sections(text, return_dict = False):
         
 
 
-def contextualize_chunk(whole_document: str, chunk_content: str, llm) -> str:
-    chain = create_chunk_contextualizer_chain(llm)
+def contextualize_chunk(llm, chunk_content: str, whole_document: str = None, metadata_context: str = None) -> str:
+    
+    if metadata_context is not None:
+        context = metadata_context
+        chain = create_chunk_contextualizer_chain(llm, use_metadata_context=True)
+    else:
+        context = whole_document
+        chain = create_chunk_contextualizer_chain(llm, use_metadata_context=False)
+    
+    # chain = create_chunk_contextualizer_chain(llm, use_metadata_context=metadata_context is not None)
     
     context = chain.invoke({
-        "whole_document": whole_document,
+        "context": context,
         "chunk_content": chunk_content
     })
     

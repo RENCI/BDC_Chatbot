@@ -5,6 +5,7 @@ import pickle
 
 from .preproc.proc_BDC_repo import get_fellow_files, get_data_mdx_files, clean_mdx, get_all_mdx_paths, clean_path
 from .preproc.utils import contextualize_chunk, paths_to_urls, split_by_sections
+from .preproc.proc_freshdesk import scrape_freshdesk
 
 from .utils import set_emb_llm
 emb, llm, DB_PATH = set_emb_llm()
@@ -121,7 +122,7 @@ for i, path in tqdm(enumerate(mdx_paths), desc="Processing pages"):
     section_list = split_by_sections(page_content)
     
     for section in section_list:
-        contextualized_chunk = contextualize_chunk(page_content, section, llm)
+        contextualized_chunk = contextualize_chunk(llm, section, whole_document=page_content)
         contextualized_chunk_list.append(contextualized_chunk)
     
     
@@ -151,7 +152,39 @@ for metadata, content in tqdm(zip(metadata_list, page_content_list), desc="Proce
 
 
 
+# region freshdesk FAQ
+print("Processing freshdesk FAQ...")
 
+freshdesk_base_url = "https://bdcatalyst.freshdesk.com"
+faq_category_dict = {
+    "BDC FAQs": "60000157358",
+    "BDC Fellows Program FAQs": "60000294708",
+}
+
+content_list, metadata_list = scrape_freshdesk(faq_category_dict, freshdesk_base_url)
+
+
+
+# TODO: MultiVectorRetriever
+# new_metadata_list = metadata_list.copy()
+
+metadata_keys = ['category', 'folder', 'title']
+# for i in range(len(content_list)):
+#     metadata_list[i]['contextualized_chunk'] = contextualize_chunk(llm, content_list[i], metadata_context={key: metadata_list[i][key] for key in metadata_keys})
+#     # metadata_list[i]['text_to_embed'] = metadata_list[i]['title'] + '\n' + content_list[i]
+    
+# for i in range(len(new_metadata_list)):
+#     new_metadata_list[i]['text_to_embed'] = metadata_list[i]['title']
+
+
+faqs_data = []
+for metadata, content in tqdm(zip(metadata_list, content_list), desc="Processing freshdesk FAQ"):
+    metadata['contextualized_chunk'] = contextualize_chunk(llm, content, metadata_context={key: metadata[key] for key in metadata_keys})
+    faqs_data.append({'metadata': metadata, 'content': content})
+
+
+
+# endregion
 
 # save all content and metadata in pkl
 with open(save_dir+'/fellows.pkl', 'wb') as f:
@@ -165,6 +198,9 @@ with open(save_dir+'/events.pkl', 'wb') as f:
 
 with open(save_dir+'/pages.pkl', 'wb') as f:
     pickle.dump(pages_data, f)
+
+with open(save_dir+'/freshdesk.pkl', 'wb') as f:
+    pickle.dump(faqs_data, f)
 
 
 

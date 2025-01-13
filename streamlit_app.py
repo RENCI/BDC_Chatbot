@@ -66,7 +66,7 @@ def initialize_variables(retriever_top_k = 5, default_rag_filter = None):
     return init_vars(retriever_top_k=retriever_top_k, default_rag_filter=default_rag_filter)
 
 
-llm, emb, vectorstore, default_retriever, retriever_top_k = initialize_variables(retriever_top_k=15)
+llm, emb, vectorstore, default_retriever, retriever_top_k = initialize_variables(retriever_top_k=10)
 
 
 

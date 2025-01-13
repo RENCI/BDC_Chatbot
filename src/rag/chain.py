@@ -114,7 +114,9 @@ def rag_chain_constructor(retriever, llm, vectorstore: VectorStore = None, retri
 Given a chat history and the latest user question \
 which might reference context in the chat history, formulate a standalone question \
 which can be understood without the chat history. Replace all "BDC" in user input with "BioData Catalyst". \
-Do NOT answer the question, just reformulate it if needed and otherwise return it as is."""
+If the question can be understood WITHOUT the chat history, do NOT change the question, return it as is. \
+Do NOT answer the question, just reformulate it if needed and otherwise return it as is.
+"""
     contextualize_q_prompt = ChatPromptTemplate.from_messages(
         [
             ("system", contextualize_q_system_prompt),
@@ -251,18 +253,38 @@ def construct_time_filter(search_query: date_filter_params = None):
 
 
 
-def create_chunk_contextualizer_chain(llm):
+def create_chunk_contextualizer_chain(llm, use_metadata_context=False):
     
-    contextualize_prompt = ChatPromptTemplate.from_template(
+    if use_metadata_context:
+        contextualize_prompt = ChatPromptTemplate.from_template(
+"""<metadata_context>
+{context}
+</metadata_context>
+Here is the chunk we want to situate with the metadata context
+<chunk>
+{chunk_content}
+</chunk>
+
+Please give a short succinct natural language context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else.
+""")
+    
+    else:
+        contextualize_prompt = ChatPromptTemplate.from_template(
 """<document>
-{whole_document}
+{context}
 </document>
 Here is the chunk we want to situate within the whole document
 <chunk>
 {chunk_content}
 </chunk>
+
 Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else.
 """)
+
+    contextualize_prompt += """
+
+"""
+
 
     # Chain components
     chain = (

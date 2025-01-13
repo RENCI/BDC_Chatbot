@@ -14,6 +14,9 @@ from tqdm import tqdm
 
 
 def loadPKL(file_path, doc_type, emb, llm = None, use_summary = False, use_contextualized_chunk = True):
+    
+    # TODO: refactor for MultiVectorRetriever
+    
     with open(file_path, 'rb') as f:
         pkl_list = pickle.load(f)
     
@@ -30,6 +33,8 @@ def loadPKL(file_path, doc_type, emb, llm = None, use_summary = False, use_conte
             summary = get_summary(page_content, llm)
             metadata[i] = dict(meta, summary=summary)
             text_to_embed.append(summary)
+        elif 'text_to_embed' in meta:
+            text_to_embed.append(meta['text_to_embed'])
         else:
             text_to_embed.append(page_content)
     
@@ -47,7 +52,7 @@ def loadPKL(file_path, doc_type, emb, llm = None, use_summary = False, use_conte
 
 
 def create_chroma_client(docs_path, db_path = ".chroma_db/", emb = None, llm = None, use_summary = False, file_name_list = None, doc_type_list = None):
-
+    # TODO: refactor for MultiVectorRetriever
     
     all_contents = []
     all_metadatas = []
