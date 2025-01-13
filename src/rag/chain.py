@@ -109,7 +109,7 @@ def rag_chain_constructor(retriever, llm, vectorstore: VectorStore = None, retri
     
     
     
-
+    # TODO: improve this prompt (questions are not returned as is)
     contextualize_q_system_prompt = """You are an assistant, called "BioData Catalyst(BDC) Assistant", for question-answering tasks related to BioData Catalyst. \
 Given a chat history and the latest user question \
 which might reference context in the chat history, formulate a standalone question \
