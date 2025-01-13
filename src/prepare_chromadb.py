@@ -54,11 +54,13 @@ chroma_client = create_chroma_client(docs_path="data/",
                                      file_name_list = ['events.pkl', 
                                                        'latest_updates.pkl', 
                                                        'fellows.pkl', 
-                                                       'pages.pkl'], 
+                                                       'pages.pkl', 
+                                                       'freshdesk.pkl'], 
                                      doc_type_list = ['event', 
                                                       'update', 
                                                       'fellow', 
-                                                      'page'])
+                                                      'page',
+                                                      'faq'])
 
 
 
