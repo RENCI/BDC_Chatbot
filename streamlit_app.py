@@ -189,7 +189,11 @@ doc_type_dict['fellow'] = "BDC Fellow"
 doc_type_dict['update'] = "BDC Update"
 doc_type_dict['event'] = "BDC Event"
 
-
+# source_type_icons = {}
+# source_type_icons['event'] = "static/source-types/event.svg"
+# source_type_icons['fellow'] = "static/source-types/fellow.svg"
+# source_type_icons['page'] = "static/source-types/page.svg"
+# source_type_icons['update'] = "static/source-types/update.svg"
 
 def filter_sources(docs):
     # sort docs by score
@@ -265,7 +269,7 @@ def parse_text(answer, context) -> str:
 
 
 # Function to display the image on hover
-def link_with_preview_on_hover(url, text, i):
+def link_with_preview_on_hover(url, text, i, doc_type):
     image_url = f"https://api.microlink.io?url={url}&screenshot=true&embed=screenshot.url"
     
     
@@ -312,19 +316,21 @@ def link_with_preview_on_hover(url, text, i):
             z-index: 999;
         }}
     '''
-    tooltip_css = f"<style>{hover_css}</style>"
 
     # Define the html for each image
-    image_hover = f'''
-        <div class="{hover_class}">
-            <a href="{url}">{text}</a>
-            <div class="{tooltip_class}">{url}</div>
-            <div class="{image_popup_class}"></div>
-        </div>
-    '''
     
     # Write the dynamic HTML and CSS to the content container
-    st.markdown(f'<p>{image_hover}{tooltip_css}</p>', unsafe_allow_html=True)
+    st.markdown(f'''
+        <div class="result">
+            <div class="chip {doc_type}">{doc_type}</div>
+            <div class="{hover_class}">
+                <a href="{url}">{text}</a>
+                <!-- <div class="{tooltip_class}">{url}</div> -->
+                <div class="{image_popup_class}"></div>
+            </div>
+            <style>{hover_css}</style>
+        <div>
+    ''', unsafe_allow_html=True)
 
 
 
@@ -336,22 +342,14 @@ def link_with_preview_on_hover(url, text, i):
 def draw_sources(sources, showSources):
     if len(sources) == 0: 
         return    
-
     with st.expander(f"Source{'s' if len(sources) > 1 else ''}", expanded=showSources):
-        output = ""
-        
-        for i, source in enumerate(sources):                    
-            output = ""                  
-
-            link_with_preview_on_hover(source['url'], source['title'], i)
-            
-            metadata_str = json.dumps(source['metadata'], indent=4)
-
-            output += f"<details>\n<summary>Metadata</summary>\n<p>{metadata_str}</p>\n</details>\n\n"
-            
-            output += f"<details>\n<summary>Content</summary>\n<p>{source['content']}</p>\n</details>\n\n"
-
-            st.markdown(output, unsafe_allow_html=True)
+        for i, source in enumerate(sources):
+            link_with_preview_on_hover(source['url'], source['title'], i, source["doc_type"])
+            # output = ""
+            # metadata_str = json.dumps(source['metadata'], indent=4)
+            # output += f"<details>\n<summary>Metadata</summary>\n<p>{metadata_str}</p>\n</details>\n\n"
+            # output += f"<details>\n<summary>Content</summary>\n<p>{source['content']}</p>\n</details>\n\n"
+            # st.markdown(output, unsafe_allow_html=True)
 
 
 

@@ -1,3 +1,11 @@
+:root {
+    --color-primary: #b33243;
+    --color_doc-type_event: #225588;
+    --color_doc-type_fellow: #882255;
+    --color_doc-type_page: #558822;
+    --color_doc-type_update: #885522;
+}
+
 html, body, h1 {
     font-family: 'Montserrat', sans-serif;
 }
@@ -7,13 +15,14 @@ h1 {
 }
 
 [data-testid="stDecoration"] {
-    background-image: linear-gradient(90deg, #31333F, #b33243);
+    background-image: linear-gradient(90deg, #31333F, var(--color-primary));
 }
 
 a {
     color: #3c718a !important;
 }
 
+<<<<<<< HEAD
 /* hide DEPLOY button in top-right of UI */
 .stAppDeployButton {
     display: none;
@@ -25,4 +34,42 @@ which currently only applies to BDCbot logo image.
 */
 .stElementContainer button {
     display: none;
+}
+
+.result {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0 0 0.5rem 0.5rem;
+    .chip {
+        background-color: #ccd;
+        font-size: 75%;
+        text-transform: uppercase;
+        border: 1px solid;
+        border-radius: 0.5rem;
+        padding: 0.1rem 0.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        [class^='hoverable_'] {
+            flex: 1;
+        }
+        &.event {
+            border-color: var(--color_doc-type_event);
+            background-color: rgb(from var(--color_doc-type_event) r g b / 0.2);
+        }
+        &.fellow {
+            border-color: var(--color_doc-type_fellow);
+            background-color: rgb(from var(--color_doc-type_fellow) r g b / 0.2);
+        }
+        &.page {
+            border-color: var(--color_doc-type_page);
+            background-color: rgb(from var(--color_doc-type_page) r g b / 0.2);
+        }
+        &.update {
+            border-color: var(--color_doc-type_update);
+            background-color: rgb(from var(--color_doc-type_update) r g b / 0.2);
+        }
+    }
 }
