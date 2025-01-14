@@ -358,7 +358,6 @@ def draw_sources(sources, showSources):
 st.image(logo, width=200)
 #st.logo(logo)
 
-
 # Initialize chat history
 if 'history' not in st.session_state:
     st.session_state['history'] = []
@@ -380,27 +379,21 @@ if prompt := st.chat_input("Ask a question"):
     display_text = ""
     context = None
     # st.session_state.messages.append({"role": "user", "content": prompt})
-
     
     for i in range(len(st.session_state['displayed_history'])):
         role, content, sources = st.session_state['displayed_history'][i]
         with st.chat_message(role, avatar=user_icon if role == "user" else bot_icon):
             st.markdown(content)
-
             if sources:
-                 draw_sources(sources, False)
-    
-    
+                draw_sources(sources, False)
     
     with st.chat_message("user", avatar=user_icon):
         st.markdown(prompt)
 
     with st.chat_message("assistant", avatar=bot_icon):
         container = st.empty()
-
         
         container.markdown("Thinking...")
-        
         
         stream = current_chain.stream({"input": prompt, "chat_history": st.session_state['history']})
 
@@ -411,7 +404,6 @@ if prompt := st.chat_input("Ask a question"):
             if 'answer' in chunk:
                 display_text += chunk['answer']
             container.markdown(display_text)
-        
         
         # res = current_chain.invoke({"input": prompt, "chat_history": st.session_state['history']})
         # context = res["context"]
@@ -425,6 +417,7 @@ if prompt := st.chat_input("Ask a question"):
         display_text, sources = parse_text(answer, context)
         container.markdown(display_text, unsafe_allow_html=True)
 
+        st.caption(":gray[_BDCBot responses are AI-generated from existing content sources and may not be accurate._]")
         draw_sources(sources, True)
         
         # result = conversational_chat(prompt)
