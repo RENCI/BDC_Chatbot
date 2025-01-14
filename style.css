@@ -13,3 +13,16 @@ h1 {
 a {
     color: #3c718a !important;
 }
+
+/* hide DEPLOY button in top-right of UI */
+.stAppDeployButton {
+    display: none;
+}
+
+/*
+hide fullscreen image button in top-right of images,
+which currently only applies to BDCbot logo image.
+*/
+.stElementContainer button {
+    display: none;
+}
