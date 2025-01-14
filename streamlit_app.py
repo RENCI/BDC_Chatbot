@@ -361,6 +361,25 @@ st.image(logo, width=200)
 # Initialize chat history
 if 'history' not in st.session_state:
     st.session_state['history'] = []
+    with st.container(height=425, border=True):
+        st.subheader("👋🏽 Welcome!")
+        st.markdown('''
+            Hello! I’m your BioData Catalyst chatbot, here to assist you with finding
+            information about our program. I can answer questions about our initiatives,
+            events, newsletters, and content from our [website](https://biodatacatalyst.nhlbi.nih.gov).
+            
+            Feel free to ask about:
+            
+            - Key features of BioData Catalyst
+            - Upcoming events or recent updates
+            - Resources or how to get involved
+            
+            While I strive to provide accurate and helpful responses, please note that
+            my answers may not always be 100% accurate. If in doubt, consult official
+            resources or contact our [support team](https://bdcatalyst.freshdesk.com/support/home) for clarification.
+            
+            __How can I assist you today?__
+        ''', unsafe_allow_html=True)
 
 if 'displayed_history' not in st.session_state:
     st.session_state['displayed_history'] = []
