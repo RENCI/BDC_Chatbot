@@ -169,3 +169,5 @@ llm_docs/
 *.ipynb
 
 .vscode/
+
+.env*
