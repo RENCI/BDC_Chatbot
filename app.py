@@ -230,9 +230,6 @@ __How can I assist you today?__
 # Initialize chat history
 if 'history' not in st.session_state:
     st.session_state['history'] = []
-    with st.container(height=425, border=True):
-        st.subheader("👋🏽 Welcome!")
-        st.markdown(greeting, unsafe_allow_html=True)
 
 if 'displayed_history' not in st.session_state:
     st.session_state['displayed_history'] = []
