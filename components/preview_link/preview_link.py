@@ -6,7 +6,7 @@ def preview_link(url, text, doc_type):
         html_content = f.read()
     
     # inject the URL and text into our HTML
-    html_content = html_content.replace("{{url}}", url).replace("{{text}}", text)
+    html_content = html_content.replace("{{url}}", url).replace("{{text}}", text).replace("{{doc_type}}", doc_type)
     
     # render
     components.html(html_content)
