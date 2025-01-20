@@ -2,8 +2,8 @@ from langchain_chroma import Chroma
 import streamlit as st
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain.globals import set_debug
-from src.rag.chain import rag_chain_constructor, construct_time_filter
-from src.utils import set_emb_llm
+from utils.rag.chain import rag_chain_constructor, construct_time_filter
+from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
 
