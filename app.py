@@ -21,21 +21,6 @@ with open( "style.css" ) as css:
 logo = "static/bdc-bot-logo-2.png"
 bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
-js_script = """<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-<script>
-$(document).ready(function() {
-    $('a[title]').each(function() {
-        var preview = $(this).attr('data-preview');
-        var tooltip = $('<div class="preview-tooltip"><img src="' + preview + '" width="300"></div>');
-        $(this).append(tooltip);
-        
-        $(this).hover(
-            function() { tooltip.show(); },
-            function() { tooltip.hide(); }
-        );
-    });
-});
-</script>"""
 
 @st.cache_resource
 def init_vars(retriever_top_k = 5, default_rag_filter = None):
@@ -136,7 +121,14 @@ def draw_sources(sources, showSources):
 # Set the title for the Streamlit app
 st.image(logo, width=200)
 
-greeting = '''
+# Initialize chat history
+if 'history' not in st.session_state:
+    st.session_state['history'] = []
+
+if 'displayed_history' not in st.session_state:
+    st.session_state['displayed_history'] = []
+
+greeting = """
 Hello! I’m your BioData Catalyst chatbot, here to assist you with finding
 information about our program. I can answer questions about our initiatives,
 events, newsletters, and content from our [website](https://biodatacatalyst.nhlbi.nih.gov).
@@ -152,25 +144,20 @@ my answers may not always be 100% accurate. If in doubt, consult official
 resources or contact our [support team](https://bdcatalyst.freshdesk.com/support/home) for clarification.
 
 __How can I assist you today?__
-'''
-
-# Initialize chat history
-if 'history' not in st.session_state:
-    st.session_state['history'] = []
-
-if 'displayed_history' not in st.session_state:
-    st.session_state['displayed_history'] = []
+"""
 
 with st.chat_message('assistant', avatar=bot_icon):
     st.markdown(greeting)
 
-# Create containers for chat history and user input
-response_container = st.container()
-container = st.container()
 
 current_chain = default_rag_chain
 
-if prompt := st.chat_input("Ask a question"):
+# container for entire chat history
+container = st.container()
+
+prompt = st.chat_input("Ask a question")
+
+if prompt:
     display_text = ""
     context = None
     
@@ -194,7 +181,6 @@ if prompt := st.chat_input("Ask a question"):
         for chunk in stream:
             if 'context' in chunk:
                 context = chunk['context']
-            
             if 'answer' in chunk:
                 display_text += chunk['answer']
             container.markdown(display_text)
@@ -204,9 +190,14 @@ if prompt := st.chat_input("Ask a question"):
         display_text, sources = parse_text(answer, context)
         container.markdown(display_text, unsafe_allow_html=True)
 
-        st.caption(":gray[_BDCBot responses are AI-generated from existing content sources and may not be accurate._]")
         draw_sources(sources, True)
     
     st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['displayed_history'].append(('user', prompt, None))
     st.session_state['displayed_history'].append(('assistant', display_text, sources))
+
+with st.sidebar:
+    st.header("BDC Resources")
+    st.link_button("Website", "https://biodatacatalyst.nhlbi.nih.gov/", icon="🌐", use_container_width=True)
+    st.link_button("Documentation", "https://bdcatalyst.gitbook.io/", icon="📖", use_container_width=True)
+    st.link_button("Support", "https://bdcatalyst.freshdesk.com/", icon="🛟", use_container_width=True)

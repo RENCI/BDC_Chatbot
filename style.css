@@ -1,4 +1,4 @@
-/*:root {
+:root {
     --color-primary: #b33243;
     --color_doc-type_event: #225588;
     --color_doc-type_fellow: #882255;
@@ -34,4 +34,19 @@ which currently only applies to BDCbot logo image.
 .stElementContainer button {
     display: none;
 }
-*/
+
+.stBottom::after {
+    content: "BDCbot responses are AI-generated from public sources and may not be accurate.";
+    display: block;
+    position: relative;
+    bottom: 1.5rem;
+    left: 0;
+    right: 0;
+    height: 0;
+    margin-top: -1rem;
+    text-align: center;
+    font-style: italic;
+    font-size: 80%;
+    color: #988;
+    z-index: 9999;
+}
