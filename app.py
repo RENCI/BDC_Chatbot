@@ -130,24 +130,21 @@ def link_with_preview_on_hover(url, text, i, doc_type):
     image_url = f"https://api.microlink.io?url={url}&screenshot=true&embed=screenshot.url"
     
     # Define link preview css
-    hover_css = f'''
+    preview_bg_style = f'''
         .previewable-link:hover .preview-image {{
             background-image: url({image_url});
         }}
     '''
 
-    # Define the html for each image
-    
-    # Write the dynamic HTML and CSS to the content container
+    # HTML, CSS for each result source
     st.markdown(f'''
         <div class="result">
             <div class="chip {doc_type}">{doc_type}</div>
             <div class="previewable-link">
                 <a href="{url}">{text}</a>
-                <!-- <div class="preview-tooltip">{url}</div> -->
                 <div class="preview-image"></div>
             </div>
-            <style>{hover_css}</style>
+            <style>{preview_bg_style}</style>
         <div>
     ''', unsafe_allow_html=True)
 
