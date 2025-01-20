@@ -6,19 +6,7 @@
     <title>Preview Link</title>
 </head>
 <body>
-    <pre id="props"></pre>
-
-    <script>
-        const params = new URLSearchParams(window.location.search);
-
-        const data = {
-            url: params.get('url'),
-            text: params.get('text'),
-            doc_type: params.get('doc_type')
-        };
-
-        // render display incoming variables as JSON
-        document.getElementById('props').textContent = JSON.stringify(data, null, 2);
-    </script>
+    <!-- Create a link using the placeholders for URL and text -->
+    <a href="{{url}}" target="_blank">{{text}}</a>
 </body>
 </html>

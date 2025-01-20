@@ -1,20 +1,12 @@
-import os
-
-import streamlit as st
 import streamlit.components.v1 as components
 
 def preview_link(url, text, doc_type):
-    # Render the frontend HTML, injecting variables via URL params
-    frontend_path = os.path.join(os.getcwd(), "components", "preview_link", "frontend", "index.html")
+    # load HTML
+    with open('components/preview_link/frontend/index.html', 'r') as f:
+        html_content = f.read()
     
-    # Read HTML template
-    with open(frontend_path, "r") as f:
-        component_html = f.read()
+    # inject the URL and text into our HTML
+    html_content = html_content.replace("{{url}}", url).replace("{{text}}", text)
     
-    # Replace placeholders with actual values (URL params)
-    component_html = component_html.replace("url=", f"url={url}")
-    component_html = component_html.replace("text=", f"text={text}")
-    component_html = component_html.replace("doc_type=", f"doc_type={doc_type}")
-
-    # Display the component in Streamlit
-    components.html(component_html, height=300)
+    # render
+    components.html(html_content)
