@@ -1,11 +1,12 @@
-from langchain_chroma import Chroma
 import streamlit as st
+from langchain_chroma import Chroma
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain.globals import set_debug
 from utils.rag.chain import rag_chain_constructor, construct_time_filter
 from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
+from components.preview_link.preview_link import preview_link
 
 set_debug(True)
 
@@ -125,35 +126,35 @@ def parse_text(answer, context) -> str:
 
     return output, sources
 
-# Function to display the image on hover
-def link_with_preview_on_hover(url, text, i, doc_type):
-    image_url = f"https://api.microlink.io?url={url}&screenshot=true&embed=screenshot.url"
+# # Function to display the image on hover
+# def link_with_preview_on_hover(url, text, i, doc_type):
+#     image_url = f"https://api.microlink.io?url={url}&screenshot=true&embed=screenshot.url"
     
-    # Define link preview css
-    preview_bg_style = f'''
-        .previewable-link:hover .preview-image {{
-            background-image: url({image_url});
-        }}
-    '''
+#     # Define link preview css
+#     preview_bg_style = f'''
+#         .previewable-link:hover .preview-image {{
+#             background-image: url({image_url});
+#         }}
+#     '''
 
-    # HTML, CSS for each result source
-    st.markdown(f'''
-        <div class="result">
-            <div class="chip {doc_type}">{doc_type}</div>
-            <div class="previewable-link">
-                <a href="{url}">{text}</a>
-                <div class="preview-image"></div>
-            </div>
-            <style>{preview_bg_style}</style>
-        <div>
-    ''', unsafe_allow_html=True)
+#     # HTML, CSS for each result source
+#     st.markdown(f'''
+#         <div class="result">
+#             <div class="chip {doc_type}">{doc_type}</div>
+#             <div class="previewable-link">
+#                 <a href="{url}">{text}</a>
+#                 <div class="preview-image"></div>
+#             </div>
+#             <style>{preview_bg_style}</style>
+#         <div>
+#     ''', unsafe_allow_html=True)
 
 def draw_sources(sources, showSources):
     if len(sources) == 0: 
         return    
     with st.expander(f"Source{'s' if len(sources) > 1 else ''}", expanded=showSources):
-        for i, source in enumerate(sources):
-            link_with_preview_on_hover(source['url'], source['title'], i, source["doc_type"])
+        for source in sources:
+            preview_link(source['url'], source['title'], source["doc_type"])
 
 # Set the title for the Streamlit app
 st.image(logo, width=200)

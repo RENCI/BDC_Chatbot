@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Link</title>
+</head>
+<body>
+    <pre id="props"></pre>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+
+        const data = {
+            url: params.get('url'),
+            text: params.get('text'),
+            doc_type: params.get('doc_type')
+        };
+
+        // render display incoming variables as JSON
+        document.getElementById('props').textContent = JSON.stringify(data, null, 2);
+    </script>
+</body>
+</html>
