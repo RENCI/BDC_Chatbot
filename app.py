@@ -21,17 +21,6 @@ logo = "static/bdc-bot-logo-2.png"
 bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
 js_script = """<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-<style>
-.preview-tooltip {
-    display: none;
-    position: absolute;
-    z-index: 1000;
-    background: white;
-    border: 1px solid #ddd;
-    padding: 5px;
-    max-width: 300px;
-}
-</style>
 <script>
 $(document).ready(function() {
     $('a[title]').each(function() {
@@ -140,47 +129,10 @@ def parse_text(answer, context) -> str:
 def link_with_preview_on_hover(url, text, i, doc_type):
     image_url = f"https://api.microlink.io?url={url}&screenshot=true&embed=screenshot.url"
     
-    # Generate unique class names for each image
-    hover_class = f'hoverable_{i}'
-    tooltip_class = f'tooltip_{i}'
-    image_popup_class = f'image-popup_{i}'
-
-    # Define the unique CSS for each image
+    # Define link preview css
     hover_css = f'''
-        .{hover_class} {{
-            position: relative;
-            display: inline-block;
-            cursor: pointer;
-        }}
-        .{hover_class} .{tooltip_class} {{
-            opacity: 0;
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            transition: opacity 0.5s;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: #fff;
-            padding: 4px;
-            border-radius: 4px;
-            text-align: center;
-            white-space: nowrap;
-        }}
-        .{hover_class}:hover .{tooltip_class} {{
-            opacity: 1;
-        }}
-        .{image_popup_class} {{
-            position: absolute;
-            display: none;
-            background-image: none;
-            width: 350px;
-            height: 200px;
-        }}
-        .{hover_class}:hover .{image_popup_class} {{
-            display: block;
+        .previewable-link:hover .preview-image {{
             background-image: url({image_url});
-            background-size: cover;
-            z-index: 999;
         }}
     '''
 
@@ -190,10 +142,10 @@ def link_with_preview_on_hover(url, text, i, doc_type):
     st.markdown(f'''
         <div class="result">
             <div class="chip {doc_type}">{doc_type}</div>
-            <div class="{hover_class}">
+            <div class="previewable-link">
                 <a href="{url}">{text}</a>
-                <!-- <div class="{tooltip_class}">{url}</div> -->
-                <div class="{image_popup_class}"></div>
+                <!-- <div class="preview-tooltip">{url}</div> -->
+                <div class="preview-image"></div>
             </div>
             <style>{hover_css}</style>
         <div>
