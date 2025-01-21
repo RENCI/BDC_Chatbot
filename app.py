@@ -118,6 +118,8 @@ def draw_sources(sources, showSources):
         for source in sources:
             preview_link(source['url'], source['title'], source["doc_type"])
 
+current_chain = default_rag_chain
+
 # Set the title for the Streamlit app
 st.image(logo, width=200)
 
@@ -133,31 +135,49 @@ Hello! I’m your BioData Catalyst chatbot, here to assist you with finding
 information about our program. I can answer questions about our initiatives,
 events, newsletters, and content from our [website](https://biodatacatalyst.nhlbi.nih.gov).
 
-Feel free to ask about:
-
-- Key features of BioData Catalyst
-- Upcoming events or recent updates
-- Resources or how to get involved
-
 While I strive to provide accurate and helpful responses, please note that
-my answers may not always be 100% accurate. If in doubt, consult official
-resources or contact our [support team](https://bdcatalyst.freshdesk.com/support/home) for clarification.
+my answers may not always be 100% accurate. When in doubt, it's best to consult
+official resources or contact our [support team](https://bdcatalyst.freshdesk.com/support/home) for clarification.
 
-__How can I assist you today?__
+Feel free to use one of these sample prompts to get our conversation started.
 """
+
+sample_prompts = [
+    "What are the key features of BioData Catalyst?",
+    "Tell me about upcoming BioData Catalyst events.",
+    "How can I get started with BioData Catalyst?",
+    "Can you summarize the latest BioData Catalyst updates?",
+    "What is BDC's fellows program?",
+    "What published research is based on BioData Catalyst?"
+]
+
+# Callback function to update the state
+def handle_click_sample_prompt(prompt):
+    st.session_state['sample_prompt_button_pressed'] = prompt
 
 with st.chat_message('assistant', avatar=bot_icon):
     st.markdown(greeting)
 
+    with st.container():
+        # Initialize button state in session state
+        if 'sample_prompt_button_pressed' not in st.session_state:
+            st.session_state['sample_prompt_button_pressed'] = ""
+        
+        # sample prompt buttons
+        button_rows = [st.columns(3), st.columns(3)]
+        for r, row in enumerate(button_rows):
+            for c, prompt in enumerate(sample_prompts[0:3]):
+                button_rows[r][c].button(
+                    prompt,
+                    key=f"example_prompt_{r}_{c}",
+                    on_click=handle_click_sample_prompt, 
+                    args=(prompt,)
+                )
 
-current_chain = default_rag_chain
+    st.subheader("_How can I assist you today?_")
 
-# container for entire chat history
-container = st.container()
 
-prompt = st.chat_input("Ask a question")
-
-if prompt:
+if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt_button_pressed']):
     display_text = ""
     context = None
     
@@ -172,10 +192,9 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant", avatar=bot_icon):
-        container = st.empty()
-        
-        container.markdown("Thinking...")
-        
+        response_container = st.empty()
+        response_container.markdown("Thinking...")
+
         stream = current_chain.stream({"input": prompt, "chat_history": st.session_state['history']})
 
         for chunk in stream:
@@ -183,12 +202,12 @@ if prompt:
                 context = chunk['context']
             if 'answer' in chunk:
                 display_text += chunk['answer']
-            container.markdown(display_text)
+            response_container.markdown(display_text)
         
         # display_text = parse_message(stream)
         answer = display_text
         display_text, sources = parse_text(answer, context)
-        container.markdown(display_text, unsafe_allow_html=True)
+        response_container.markdown(display_text, unsafe_allow_html=True)
 
         draw_sources(sources, True)
     

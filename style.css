@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
 :root {
     --color-primary: #b33243;
     --color_doc-type_event: #225588;
@@ -7,7 +9,7 @@
 }
 
 html, body, h1 {
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 h1 {
@@ -24,14 +26,6 @@ a {
 
 /* hide DEPLOY button in top-right of UI */
 .stAppDeployButton {
-    display: none;
-}
-
-/*
-hide fullscreen image button in top-right of images,
-which currently only applies to BDCbot logo image.
-*/
-.stElementContainer button {
     display: none;
 }
 
