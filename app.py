@@ -196,17 +196,14 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         response_container = st.empty()
         response_container.markdown("Thinking...")
 
-        stream = current_chain.stream({"input": prompt, "chat_history": st.session_state['history']})
-
-        for chunk in stream:
-            if 'context' in chunk:
-                context = chunk['context']
-            if 'answer' in chunk:
-                display_text += chunk['answer']
-            response_container.markdown(display_text)
+        res = current_chain.invoke({"input": prompt, "chat_history": st.session_state['history']})
         
-        # display_text = parse_message(stream)
-        answer = display_text
+        print("current_chain.invoke: \n", res)
+
+        context = res["context"]
+        answer = res["answer"]
+        display_text += answer
+
         display_text, sources = parse_text(answer, context)
         response_container.markdown(display_text, unsafe_allow_html=True)
 
