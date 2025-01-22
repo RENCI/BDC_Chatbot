@@ -166,7 +166,8 @@ with st.chat_message('assistant', avatar=bot_icon):
         # sample prompt buttons
         button_rows = [st.columns(3), st.columns(3)]
         for r, row in enumerate(button_rows):
-            for c, prompt in enumerate(sample_prompts[0:3]):
+            this_row_prompts = sample_prompts[0 + r*3:3 + r*3]
+            for c, prompt in enumerate(this_row_prompts):
                 button_rows[r][c].button(
                     prompt,
                     key=f"example_prompt_{r}_{c}",
