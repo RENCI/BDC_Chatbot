@@ -6,6 +6,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 # from langchain_community.embeddings import OllamaEmbeddings
 
 from langchain_ollama import OllamaEmbeddings
+from .rag.chain import strip_thought
 
 def set_emb_llm():
 
@@ -34,4 +35,4 @@ def set_emb_llm():
         emb = OpenAIEmbeddings(model="text-embedding-3-small")
         print("model: text-embedding-3-small")
 
-    return emb, llm, DB_PATH
+    return emb, llm | strip_thought, DB_PATH

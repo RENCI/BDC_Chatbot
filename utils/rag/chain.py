@@ -5,7 +5,7 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import create_retrieval_chain#, create_stuff_documents_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_history_aware_retriever
-
+from langchain_core.messages import AIMessage
 
 from langchain.chains.query_constructor.ir import (
     Comparator,
@@ -93,6 +93,14 @@ from langchain_core.vectorstores.base import VectorStoreRetriever, VectorStore
         
         
 #         return docs
+
+
+def strip_thought(message: AIMessage):
+    messages = message.content.split('</think>')
+    thought = messages[0].replace('<think>', '').replace('</think>', '')
+    message.content = messages[-1].strip("\n\n")
+    message.response_metadata['thought'] = thought
+    return message
 
 
 class RetrieverWithScore(VectorStoreRetriever):
