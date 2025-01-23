@@ -33,7 +33,7 @@ python -m src.prepare_chromadb                                      # create chr
 
 ## Run chatbot
 ```bash
-streamlit run ./src/streamlit_app.py                                # run streamlit app
+streamlit run app.py                                # run streamlit app
 ```
 
 > [!WARNING]
