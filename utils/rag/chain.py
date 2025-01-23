@@ -5,7 +5,7 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import create_retrieval_chain#, create_stuff_documents_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_history_aware_retriever
-
+from langchain_core.messages import AIMessage
 
 from langchain.chains.query_constructor.ir import (
     Comparator,
@@ -55,6 +55,15 @@ from typing import Any, Dict
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores.base import VectorStoreRetriever, VectorStore
 
+
+
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers import BM25Retriever
+from langchain.retrievers import EnsembleRetriever
+
+from nltk.tokenize import word_tokenize
+
+
 # class RetrieverWithScore(VectorStoreRetriever):
 #     # init with vectorstore
 #     def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
@@ -95,6 +104,18 @@ from langchain_core.vectorstores.base import VectorStoreRetriever, VectorStore
 #         return docs
 
 
+
+
+def strip_thought(message: AIMessage):
+    messages = message.content.split('</think>')
+    thought = messages[0].replace('<think>', '').replace('</think>', '')
+    message.content = messages[-1].strip("\n\n")
+    message.response_metadata['thought'] = thought
+    return message
+
+
+
+
 class RetrieverWithScore(VectorStoreRetriever):
     # init with vectorstore
     def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
@@ -124,6 +145,13 @@ class RetrieverWithScore(VectorStoreRetriever):
 
 
 
+
+
+
+
+
+
+
 summary_prompt = ChatPromptTemplate.from_messages(
     [("system", "Write a concise summary of the following text in 1-3 sentences, return the summary ONLY, This is NOT a conversation. \\n\\n{text}")]
 )
@@ -134,15 +162,37 @@ def get_summary(text: str, llm):
 
 
 
-def rag_chain_constructor(retriever, llm, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5):
+def rag_chain_constructor(retriever, llm, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False):
     if vectorstore is not None:
         print("using RetrieverWithScore")
         # retriever = RetrieverWithScore(vectorstore, search_type="similarity_score_threshold", search_kwargs={'score_threshold': score_threshold,'k':retriever_top_k})
         retriever = RetrieverWithScore(vectorstore, search_kwargs={'k':retriever_top_k})
     
+
     
+    if hybrid_retriever:
+        print("using hybrid retriever")
+        emb_retriever_top_k = retriever_top_k//2
+        
+        documents = [Document(page_content=doc, metadata=meta) for doc, meta in zip(vectorstore.get()["documents"], vectorstore.get()["metadatas"])]
+        
+        # TODO: add similarity score to metadata
+        bm25_retriever = BM25Retriever.from_documents(documents, 
+                                                      k=retriever_top_k-emb_retriever_top_k, 
+                                                      preprocess_func=word_tokenize)
+        
+        
+        retriever = EnsembleRetriever(
+            retrievers=[retriever, bm25_retriever],
+            weights=[0.5, 0.5]
+        )
     
-    
+    if compressor is not None:
+        print("using compressor (reranker)")
+        retriever = ContextualCompressionRetriever(
+            base_compressor=compressor,
+            base_retriever=retriever
+        )
     
 
     contextualize_q_system_prompt = """You are an assistant, called "BioData Catalyst(BDC) Assistant", for question-answering tasks related to BioData Catalyst. \

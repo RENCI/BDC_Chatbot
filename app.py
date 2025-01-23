@@ -1,6 +1,7 @@
 import streamlit as st
 from langchain_chroma import Chroma
 from langchain_core.messages import HumanMessage, AIMessage
+from langchain.retrievers.document_compressors import FlashrankRerank
 from langchain.globals import set_debug
 from utils.rag.chain import rag_chain_constructor, construct_time_filter
 from utils import set_emb_llm
@@ -37,11 +38,15 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None):
                          })
     default_retriever.search_type = "similarity_score_threshold"
     
-    return llm, emb, vectorstore, default_retriever, retriever_top_k
+    compressor = FlashrankRerank(top_n=5, model = "ms-marco-MiniLM-L-12-v2")
+    
+    
+    
+    return llm, emb, vectorstore, default_retriever, retriever_top_k, compressor
 
-llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=10)
+llm, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20)
 
-default_rag_chain = rag_chain_constructor(default_retriever, llm, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5)
+default_rag_chain = rag_chain_constructor(default_retriever, llm, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
 
 doc_type_dict = defaultdict(lambda: "Source")
 doc_type_dict['page'] = "BDC Web Page"
@@ -52,6 +57,8 @@ doc_type_dict['event'] = "BDC Event"
 def filter_sources(docs):
     # Split by the maximum distance between scores
     # XXX: Could use something more sophisticated such as Otsu thresholding...
+    return docs
+    
     max_diff = 0
     max_diff_index = 0
     for i in range(len(docs)-1):        
@@ -94,7 +101,7 @@ def parse_text(answer, context) -> str:
                 'doc_type': doc.metadata['doc_type'],    
                 'metadata': doc.metadata,
                 'content': doc.page_content,
-                'score': doc.metadata['score']   
+                # 'score': doc.metadata['score']   
             }
             
             if 'title' in doc.metadata:
