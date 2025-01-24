@@ -36,6 +36,16 @@ python -m src.prepare_chromadb                                      # create chr
 streamlit run app.py                                # run streamlit app
 ```
 
+## Docker
+
+```bash
+$ docker build -t bdc-bot .
+```
+
+```bash
+$ docker run --rm --name bdc-bot -p 8501:8501 -e OPENAI_API_KEY=sk-proj-abc123 bdc-bot
+```
+
 > [!WARNING]
 >
 > - If you see `ValueError: Received disallowed comparator nin` when running the chatbot app, add `Comparator.IN, Comparator.NIN` to `langchain_community\query_constructors\chroma.py` under `allowed_comparators`
