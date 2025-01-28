@@ -53,6 +53,12 @@ Build the image. The generated data will get copied into the image.
 $ docker build -t bdc-bot .
 ```
 
+You'll need an `.env` file with at least these two variables defined:
+```
+DB_PATH=./path-to-db-dir
+OPENAI_API_KEY=sk-proj-321321
+```
+
 ```bash
 $ docker run --rm --name bdc-chatbot -p 8501:8501 --env-file .env bdc-bot
 ```
