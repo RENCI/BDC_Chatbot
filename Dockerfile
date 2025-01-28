@@ -5,12 +5,12 @@ FROM python:3.12
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
-COPY requirements.txt /app
+COPY requirements.txt .
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /app
+COPY . .
 
 # add Comparator.IN, Comparator.NIN to chroma.py
 RUN sed -i '/allowed_comparators = \[/a\        Comparator.IN,\n        Comparator.NIN,' /usr/local/lib/python3.12/site-packages/langchain_community/query_constructors/chroma.py

@@ -2,19 +2,21 @@
 
 Chatbot for Biodata Catalyst
 
-## Get documentation
+## Development
+
+### Get documentation
 Clone the [BDC website repo](https://github.com/stagecc/interim-bdc-website/tree/main) to a directory with the same parent directory as this repo.
 
-## Copy environment variables
+### Copy environment variables
 Copy `.env_example` to `.env` and make any necessary changes
 
-## Install dependencies
+### Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Port forwarding for local development using vLLM and Ollama at RENCI
+### Port forwarding for local development using vLLM and Ollama at RENCI
 
 ```bash
 kubectl -n ner port-forward svc/vllm-llama-3-1-8b-instruct 8080:80  # vLLM port-forward
@@ -24,27 +26,38 @@ kubectl -n ner port-forward svc/ollama 11434:11434                  # Ollama por
 ```
 Edit `.env` to match
 
-## Create RAG database
+### Create RAG database
 
 ```bash
 python ./src/preproc_doc.py                                         # preprocess BDC website repo
 python -m src.prepare_chromadb                                      # create chroma db
 ```
 
-## Run chatbot
+### Run chatbot
 ```bash
 streamlit run app.py                                # run streamlit app
 ```
 
 ## Docker
 
+If not already done, ensure RAG database has been populated. As above, 
+
+```bash
+python ./src/preproc_doc.py                                         # preprocess BDC website repo
+python -m src.prepare_chromadb                                      # create chroma db
+```
+
+Build the image. The generated data will get copied into the image.
+
 ```bash
 $ docker build -t bdc-bot .
 ```
 
 ```bash
-$ docker run --rm --name bdc-bot -p 8501:8501 -e OPENAI_API_KEY=sk-proj-abc123 bdc-bot
+$ docker run --rm --name bdc-chatbot -p 8501:8501 --env-file .env bdc-bot
 ```
+
+## Additional Notes
 
 > [!WARNING]
 >
