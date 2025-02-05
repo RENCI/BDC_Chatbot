@@ -55,6 +55,8 @@ DB_PATH=./chroma_db
 OPENAI_API_KEY=sk-proj-321321
 ```
 
+Run a container.
+
 ```bash
 $ docker run --rm --name bdc-chatbot -p 8501:8501 bdcbot
 ```
