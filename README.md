@@ -40,27 +40,23 @@ streamlit run app.py                                # run streamlit app
 
 ## Docker
 
-If not already done, ensure RAG database has been populated. As above, 
+Build the image.
 
 ```bash
-python ./src/preproc_doc.py                                         # preprocess BDC website repo
-python -m src.prepare_chromadb                                      # create chroma db
+$ docker build --build-arg DB_PATH=$(grep DB_PATH .env | cut -d '=' -f2) \
+               --build-arg OPENAI_API_KEY=$(grep OPENAI_API_KEY .env | cut -d '=' -f2) \
+               -t bdcbot .
+
 ```
 
-Build the image. The generated data will get copied into the image.
-
-```bash
-$ docker build -t bdc-bot .
+Like above, you'll need to ensure an `.env` file is in place with at least these two variables defined:
 ```
-
-You'll need an `.env` file with at least these two variables defined:
-```
-DB_PATH=./path-to-db-dir
+DB_PATH=./chroma_db
 OPENAI_API_KEY=sk-proj-321321
 ```
 
 ```bash
-$ docker run --rm --name bdc-chatbot -p 8501:8501 --env-file .env bdc-bot
+$ docker run --rm --name bdc-chatbot -p 8501:8501 bdcbot
 ```
 
 ## Additional Notes
@@ -73,3 +69,11 @@ $ docker run --rm --name bdc-chatbot -p 8501:8501 --env-file .env bdc-bot
 >
 > - To use ${\color{orange}\text{vLLM}}$ API for chat completion, remove `parallel_tool_calls=False` from `langchain_openai\chat_models\base.py`
 > - Chroma DB initialization might quit without error or warning, might be caused by compatibility issue with Windows.
+
+## Docker
+
+```bash
+docker build --build-arg DB_PATH=$(grep DB_PATH .env | cut -d '=' -f2) \
+             --build-arg OPENAI_API_KEY=$(grep OPENAI_API_KEY .env | cut -d '=' -f2) \
+             -t bdcbot .
+```
