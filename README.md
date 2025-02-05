@@ -69,11 +69,3 @@ $ docker run --rm --name bdc-chatbot -p 8501:8501 bdcbot
 >
 > - To use ${\color{orange}\text{vLLM}}$ API for chat completion, remove `parallel_tool_calls=False` from `langchain_openai\chat_models\base.py`
 > - Chroma DB initialization might quit without error or warning, might be caused by compatibility issue with Windows.
-
-## Docker
-
-```bash
-docker build --build-arg DB_PATH=$(grep DB_PATH .env | cut -d '=' -f2) \
-             --build-arg OPENAI_API_KEY=$(grep OPENAI_API_KEY .env | cut -d '=' -f2) \
-             -t bdcbot .
-```
