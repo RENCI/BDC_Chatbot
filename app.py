@@ -24,7 +24,7 @@ bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
 
 @st.cache_resource
-def init_vars(retriever_top_k = 5, default_rag_filter = None):
+def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
     emb, llm, DB_PATH = set_emb_llm()
 
     vectorstore = Chroma(persist_directory=DB_PATH,embedding_function=emb)
@@ -38,15 +38,21 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None):
                          })
     default_retriever.search_type = "similarity_score_threshold"
     
-    compressor = FlashrankRerank(top_n=5, model = "ms-marco-MiniLM-L-12-v2")
-    
+    if rerank_top_k > 0:
+        compressor = FlashrankRerank(top_n=rerank_top_k, model = "ms-marco-MiniLM-L-12-v2")
+    elif rerank_top_k == 0: 
+        compressor = FlashrankRerank(top_n=retriever_top_k, model = "ms-marco-MiniLM-L-12-v2")
+    else:
+        compressor = None
     
     
     return llm, emb, vectorstore, default_retriever, retriever_top_k, compressor
 
-llm, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20)
+llm, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20, 
+                                                                                  rerank_top_k=10)
 
-default_rag_chain = rag_chain_constructor(default_retriever, llm, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
+default_rag_chain = rag_chain_constructor(default_retriever, llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
+
 
 doc_type_dict = defaultdict(lambda: "Source")
 doc_type_dict['page'] = "BDC Web Page"
@@ -57,7 +63,11 @@ doc_type_dict['event'] = "BDC Event"
 def filter_sources(docs):
     # Split by the maximum distance between scores
     # XXX: Could use something more sophisticated such as Otsu thresholding...
+    
     return docs
+    
+    # sort docs by score
+    docs.sort(key=lambda x: x.metadata["score"], reverse=True)
     
     max_diff = 0
     max_diff_index = 0
@@ -101,7 +111,8 @@ def parse_text(answer, context) -> str:
                 'doc_type': doc.metadata['doc_type'],    
                 'metadata': doc.metadata,
                 'content': doc.page_content,
-                # 'score': doc.metadata['score']   
+                'retriever_type': doc.metadata.get('retriever_type', 'NA'),
+                'score': doc.metadata.get('score', 'NA')
             }
             
             if 'title' in doc.metadata:
@@ -123,7 +134,7 @@ def draw_sources(sources, showSources):
         return    
     with st.expander(f"Source{'s' if len(sources) > 1 else ''}", expanded=showSources):
         for source in sources:
-            preview_link(source['url'], source['title'], source["doc_type"])
+            preview_link(source['url'], source['title'], source["doc_type"], source["retriever_type"], source["score"])
 
 current_chain = default_rag_chain
 

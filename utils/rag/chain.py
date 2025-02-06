@@ -20,7 +20,7 @@ from langchain_core.documents import Document
 
 
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Iterable, Optional
 
 
 
@@ -58,7 +58,8 @@ from langchain_core.vectorstores.base import VectorStoreRetriever, VectorStore
 
 
 from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers import BM25Retriever
+from langchain_community.retrievers import BM25Retriever
+# from langchain.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 
 from nltk.tokenize import word_tokenize
@@ -116,7 +117,7 @@ def strip_thought(message: AIMessage):
 
 
 
-class RetrieverWithScore(VectorStoreRetriever):
+class VectorStoreRetrieverWithScore(VectorStoreRetriever):
     # init with vectorstore
     def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
         """Initialize with vectorstore."""
@@ -132,7 +133,7 @@ class RetrieverWithScore(VectorStoreRetriever):
         )
         for doc, score in zip(docs, scores):
             doc.metadata["score"] = score
-
+            doc.metadata["retriever_type"] = "similarity"
         return docs
 
     def _get_relevant_documents(
@@ -144,6 +145,49 @@ class RetrieverWithScore(VectorStoreRetriever):
 
 
 
+
+from sklearn.metrics.pairwise import cosine_similarity
+from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
+
+# import numpy as np
+# from scipy.spatial.distance import cdist
+# def cosine_similarity_score(x, y):
+#     similarities = 1 - cdist(x, y, metric='cosine')
+#     return similarities[0][0]
+
+
+class BM25RetrieverWithScore(BM25Retriever):
+    # # init with vectorstore
+    # def __init__(self, emb, **kwargs: Any) -> None:
+    #     """Initialize with vectorstore."""
+    #     super().__init__(**kwargs)
+    #     self.emb = emb
+    
+    # @classmethod
+    # def from_documents(cls, emb=None, **kwargs: Any) -> BM25Retriever:
+    #     cls.emb = emb
+    #     return cls(**kwargs)
+    
+    
+    def _get_relevant_documents(
+        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+    ) -> List[Document]:
+        processed_query = self.preprocess_func(query)
+        return_docs = self.vectorizer.get_top_n(processed_query, self.docs, n=self.k)
+        
+        # print("return_docs[0]: ", return_docs[0])
+        
+        
+        # get similarity score of query to each doc
+        doc_emb = self.emb.embed_documents([doc.page_content for doc in return_docs])
+        query_emb = self.emb.embed_query(query)
+        
+        for i, doc in enumerate(return_docs):
+            doc.metadata["score"] = 1 - cosine_similarity([query_emb], [doc_emb[i]])[0][0]
+            doc.metadata["retriever_type"] = "bm25"
+        
+        
+        return return_docs
 
 
 
@@ -162,11 +206,11 @@ def get_summary(text: str, llm):
 
 
 
-def rag_chain_constructor(retriever, llm, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False):
+def rag_chain_constructor(retriever, llm, emb, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False):
     if vectorstore is not None:
         print("using RetrieverWithScore")
         # retriever = RetrieverWithScore(vectorstore, search_type="similarity_score_threshold", search_kwargs={'score_threshold': score_threshold,'k':retriever_top_k})
-        retriever = RetrieverWithScore(vectorstore, search_kwargs={'k':retriever_top_k})
+        retriever = VectorStoreRetrieverWithScore(vectorstore, search_kwargs={'k':retriever_top_k})
     
 
     
@@ -177,9 +221,9 @@ def rag_chain_constructor(retriever, llm, vectorstore: VectorStore = None, retri
         documents = [Document(page_content=doc, metadata=meta) for doc, meta in zip(vectorstore.get()["documents"], vectorstore.get()["metadatas"])]
         
         # TODO: add similarity score to metadata
-        bm25_retriever = BM25Retriever.from_documents(documents, 
+        bm25_retriever = BM25RetrieverWithScore.from_documents(documents, 
                                                       k=retriever_top_k-emb_retriever_top_k, 
-                                                      preprocess_func=word_tokenize)
+                                                      preprocess_func=word_tokenize, emb=emb)
         
         
         retriever = EnsembleRetriever(
