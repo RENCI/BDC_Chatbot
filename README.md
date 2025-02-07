@@ -66,6 +66,10 @@ Push to container registry.
 docker push containers.renci.org/comms/bdc-chatbot:0.1.0
 ```
 
+> [!NOTE]
+> You may need to log in with `docker login containers.renci.org`.
+
+
 Update version tag in `chart/values.yaml`.
 ```
 image:
