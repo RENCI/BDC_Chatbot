@@ -40,25 +40,41 @@ streamlit run app.py                                # run streamlit app
 
 ## Docker
 
-Build the image.
-
-```bash
-$ docker build --build-arg DB_PATH=$(grep DB_PATH .env | cut -d '=' -f2) \
-               --build-arg OPENAI_API_KEY=$(grep OPENAI_API_KEY .env | cut -d '=' -f2) \
-               -t bdcbot .
-
-```
-
-Like above, you'll need to ensure an `.env` file is in place with at least these two variables defined:
+Like above, you'll need to ensure an `.env` file is in place with these two variables defined:
 ```
 DB_PATH=./chroma_db
 OPENAI_API_KEY=sk-proj-321321
 ```
 
-Run a container.
+Build the image.
 
 ```bash
-$ docker run --rm --name bdc-chatbot -p 8501:8501 bdcbot
+$ docker build --build-arg DB_PATH=$(grep DB_PATH .env | cut -d '=' -f2) \
+               --build-arg OPENAI_API_KEY=$(grep OPENAI_API_KEY .env | cut -d '=' -f2) \
+               -t containers.renci.org/comms/bdc-chatbot:0.1.0 .
+
+```
+
+Verify the image works.
+
+```bash
+$ docker run --rm --name bdc-chatbot -p 8501:8501 containers.renci.org/comms/bdc-chatbot:0.1.0
+```
+
+Push to container registry.
+```bash
+docker push containers.renci.org/comms/bdc-chatbot:0.1.0
+```
+
+Update version tag in `chart/values.yaml`.
+```
+image:
+  tag: "0.1.0" # match tag to version
+```
+
+Deploy.
+```
+helm install bdcbot ./chart/ -n comms
 ```
 
 ## Additional Notes
