@@ -1,38 +1,50 @@
-# Use an official Python runtime as a parent image
-FROM python:3.12
+FROM python:3.12 AS builder
+
+# set working directory
+WORKDIR /app
 
 # get website source files
 RUN git clone https://github.com/stagecc/interim-bdc-website
 
-# Set the working directory in the container to /app
+# copy only requirements file to leverage caching
+COPY requirements.txt .
+
+# install dependencies in a temporary layer
+RUN pip install --no-cache-dir -r requirements.txt --target /dependencies
+
+# modify langchain files before finalizing the build
+RUN sed -i '/allowed_comparators = \[/a\        Comparator.IN,\n        Comparator.NIN,' /dependencies/langchain_community/query_constructors/chroma.py && \
+    sed -i 's/parallel_tool_calls=False,//g' /dependencies/langchain_openai/chat_models/base.py
+
+
+# --- final stage ---
+FROM python:3.12 AS runtime
+
+# get website source files again?
+RUN git clone https://github.com/stagecc/interim-bdc-website
+
+# set working directory
 WORKDIR /app
 
-# Declare build-time arguments
+# declare build-time arguments
 ARG DB_PATH
 ARG OPENAI_API_KEY
 
-# Set runtime environment variables
+# set runtime environment variables
 ENV DB_PATH=$DB_PATH
 ENV OPENAI_API_KEY=$OPENAI_API_KEY
 
-# Copy the current directory contents into the container at /app
-COPY requirements.txt .
+# copy only the necessary dependencies from the builder stage
+COPY --from=builder /dependencies /usr/local/lib/python3.12/site-packages/
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# add Comparator.IN, Comparator.NIN to chroma.py
-RUN sed -i '/allowed_comparators = \[/a\        Comparator.IN,\n        Comparator.NIN,' /usr/local/lib/python3.12/site-packages/langchain_community/query_constructors/chroma.py
-
-# Remove `parallel_tool_calls=False` argument from langchain_openai
-RUN sed -i 's/parallel_tool_calls=False,//g' /usr/local/lib/python3.12/site-packages/langchain_openai/chat_models/base.py
-
+# copy application files
 COPY . .
 
 # create RAG database
 RUN python ./utils/preproc_doc.py && python -m utils.prepare_chromadb
 
+# expose Streamlit port
 EXPOSE 8501
 
-# Run streamlit when the container launches, also enable development features like auto-reload
+# run Streamlit when the container launches
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.enableCORS=false"]
