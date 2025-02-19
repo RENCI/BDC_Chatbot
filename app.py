@@ -7,6 +7,7 @@ from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
 from components.preview_link import preview_link
+import random
 
 set_debug(True)
 
@@ -18,7 +19,7 @@ st.set_page_config(
 with open( "style.css" ) as css:
     st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
 
-logo = "static/bdc-bot-logo-2.png"
+# logo = "static/bdc-bot-logo-2.png"
 bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
 
@@ -126,8 +127,20 @@ with st.sidebar:
     st.link_button("Documentation", "https://bdcatalyst.gitbook.io/", icon="📖", use_container_width=True)
     st.link_button("Support", "https://bdcatalyst.freshdesk.com/", icon="🛟", use_container_width=True)
 
+introduction = """
+This is a test of the BDCBot in development by RENCI.
+If you are a tester, please complete [this form](https://example.com) after your test.
+If you have navigated to this page in error, please close your browser window.
+If you wish to reach someone about this test, please contact 
+[David Borland](mailto:borland@renci.org) or [Nathalie Volkheimer](mailto:natvolk@renci.org).
+
+---
+"""
+
 # Set the title for the Streamlit app
-st.image(logo, width=200)
+# st.image(logo, width=200)
+st.text('[BDCbot test]')
+st.markdown(introduction)
 
 # Initialize chat history
 if 'history' not in st.session_state:
@@ -136,32 +149,42 @@ if 'history' not in st.session_state:
 if 'displayed_history' not in st.session_state:
     st.session_state['displayed_history'] = []
 
+
 greeting = """
-Hello! I’m your BioData Catalyst chatbot, here to assist you with finding
-information about our program. I can answer questions about our initiatives,
-events, newsletters, and content from our [website](https://biodatacatalyst.nhlbi.nih.gov).
+Hello! I am the NHLBI BioData Catalyst® Chatbot, also known as BDCBot.
+I am AI powered, and here to support you on your blood, heart, lung
+or sleep research journey.
 
-While I strive to provide accurate and helpful responses, please note that
-my answers may not always be 100% accurate. When in doubt, it's best to consult
-official resources or contact our [support team](https://bdcatalyst.freshdesk.com/support/home) for clarification.
+I have been trained on public websites, but also specifically on approved
+BDC documentation. My answers will be as accurate and as current as the
+documentation I am trained upon. If yu want to double check my answers I
+would encourage you to check the sources outlined in my responses and/or
+contact the BDC HelpDesk (link). BDC’s support team isn’t just AI powered;
+we have humans to help you one on one in live video chat by appointment too!
 
-Feel free to use one of these sample prompts to get our conversation started.
+Not sure what to ask? Here are some prompts.
 """
 
 sample_prompts = [
-    "What are the key features of BioData Catalyst?",
-    "Tell me about upcoming BioData Catalyst events.",
-    "How can I get started with BioData Catalyst?",
-    "Can you summarize the latest BioData Catalyst updates?",
-    "What is BDC's fellows program?",
-    "What published research is based on BioData Catalyst?"
+    "How can I find the datasets in BDC?",
+    "Can I download data from BDC?",
+    "Does BDC have TOPMed data in it?",
+    "Where can I find the RECOVER dataset?",
+    "Does BDC use AWS, Azure or Google?",
+    "Does BDC cost money to use?",
+    "Can I import tools into BDC?",
+    "Does BDC meet the Fisma-moderate security environment requirements?",
+    "Can I bring PHI into BDC?",
 ]
+
+# Randomly select six prompts
+random_prompts = random.sample(sample_prompts, 4)
 
 # Callback function to update the state
 def handle_click_sample_prompt(prompt):
     st.session_state['sample_prompt_button_pressed'] = prompt
 
-with st.chat_message('assistant', avatar=bot_icon):
+with st.chat_message('bdc-assistant'):
     st.markdown(greeting)
 
     with st.container():
@@ -169,10 +192,28 @@ with st.chat_message('assistant', avatar=bot_icon):
         if 'sample_prompt_button_pressed' not in st.session_state:
             st.session_state['sample_prompt_button_pressed'] = ""
         
+        st.markdown(
+            """
+            <style>
+            /* these styles align button sizes in the sample button grid */
+            .stButton {
+                display: flex;
+                & > button {
+                    padding: 1rem;
+                    font-size: 1rem;
+                    flex: 1;
+                    height: 4rem;
+                }
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        
         # sample prompt buttons
-        button_rows = [st.columns(3), st.columns(3)]
+        button_rows = [st.columns(2), st.columns(2)]
         for r, row in enumerate(button_rows):
-            this_row_prompts = sample_prompts[0 + r*3:3 + r*3]
+            this_row_prompts = random_prompts[0 + r*2:2 + r*2]
             for c, prompt in enumerate(this_row_prompts):
                 button_rows[r][c].button(
                     prompt,
@@ -181,24 +222,22 @@ with st.chat_message('assistant', avatar=bot_icon):
                     args=(prompt,)
                 )
 
-    st.subheader("_How can I assist you today?_")
-
-
+st.markdown("For more information on how this works, click here")
 if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt_button_pressed']):
     display_text = ""
     context = None
     
     for i in range(len(st.session_state['displayed_history'])):
         role, content, sources = st.session_state['displayed_history'][i]
-        with st.chat_message(role, avatar=user_icon if role == "user" else bot_icon):
+        with st.chat_message(role):
             st.markdown(content)
             if sources:
                 draw_sources(sources, False)
     
-    with st.chat_message("user", avatar=user_icon):
+    with st.chat_message("using-bdc"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar=bot_icon):
+    with st.chat_message('bdc-assistant'):
         response_container = st.empty()
         response_container.markdown("Thinking...")
 
@@ -217,4 +256,29 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
     
     st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['displayed_history'].append(('user', prompt, None))
-    st.session_state['displayed_history'].append(('assistant', display_text, sources))
+    st.session_state['displayed_history'].append(('bdc-assistant', display_text, sources))
+
+st.markdown(
+    """
+<style>
+    .disclaimer {
+        display: block;
+        position: fixed;
+        bottom: 1.5rem;
+        left: 0;
+        right: 1.5rem;
+        height: 0;
+        margin-top: -1rem;
+        text-align: right;
+        font-style: italic;
+        font-size: 80%;
+        color: #988;
+        z-index: 9999;
+    }
+</style>
+<div class="disclaimer">
+    <a href="https://github.com/renci/bdc_chatbot">Click here</a> for more information on how this works.
+</div>
+    """,
+    unsafe_allow_html=True
+)
