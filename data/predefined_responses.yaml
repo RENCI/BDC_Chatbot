@@ -1,0 +1,9 @@
+FISMA:
+  response: "FISMA response placeholder (replace)"
+  flag: "r"
+  source: "FISMA source placeholder (replace)"
+
+Covid-19:
+  response: "Covid-19 response placeholder (append)"
+  flag: "a"
+  source: null

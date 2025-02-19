@@ -2,14 +2,14 @@ import streamlit as st
 from langchain_chroma import Chroma
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain.retrievers.document_compressors import FlashrankRerank
-from langchain.globals import set_debug
-from utils.rag.chain import rag_chain_constructor, construct_time_filter
+from langchain.globals import set_debug, set_verbose
+from utils.rag.chain import create_main_chain, create_time_filter
 from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
 from components.preview_link import preview_link
 
-set_debug(True)
+set_verbose(True)
 
 st.set_page_config(
     page_title="BDC Bot",
@@ -25,12 +25,12 @@ user_icon = "static/user-32x32.png"
 
 @st.cache_resource
 def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
-    emb, llm, DB_PATH = set_emb_llm()
+    emb, llm, guardian_llm, DB_PATH = set_emb_llm()
 
     vectorstore = Chroma(persist_directory=DB_PATH,embedding_function=emb)
 
     if default_rag_filter is None:
-        default_rag_filter = construct_time_filter()
+        default_rag_filter = create_time_filter()
     
     default_retriever = vectorstore.as_retriever(
         search_kwargs = {"k": retriever_top_k, 
@@ -46,12 +46,12 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
         compressor = None
     
     
-    return llm, emb, vectorstore, default_retriever, retriever_top_k, compressor
+    return llm, guardian_llm, emb, vectorstore, default_retriever, retriever_top_k, compressor
 
-llm, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20, 
+llm, guardian_llm, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20, 
                                                                                   rerank_top_k=10)
 
-default_rag_chain = rag_chain_constructor(default_retriever, llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
+default_rag_chain = create_main_chain(default_retriever, llm, guardian_llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
 
 
 doc_type_dict = defaultdict(lambda: "Source")
@@ -218,11 +218,18 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         
         print("current_chain.invoke: \n", res)
 
-        context = res["context"]
+        
         answer = res["answer"]
+        
+        context = res.get("context", [])
+        display_answer = res.get("display_answer", answer)
+        
+        # print("flag: ", res["flag"])
+        
+        
         display_text += answer
 
-        display_text, sources = parse_text(answer, context)
+        display_text, sources = parse_text(display_answer, context)
         response_container.markdown(display_text, unsafe_allow_html=True)
 
         draw_sources(sources, True)

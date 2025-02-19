@@ -6,6 +6,8 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 # from langchain_community.embeddings import OllamaEmbeddings
 
 from langchain_ollama import OllamaEmbeddings
+from langchain_ollama import ChatOllama
+
 from .rag.chain import strip_thought
 
 def set_emb_llm():
@@ -16,6 +18,8 @@ def set_emb_llm():
     COMPLETION_MODEL = os.getenv("COMPLETION_MODEL")
     EMBEDDING_URL = os.getenv("EMBEDDING_URL")
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
+    GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL")
+    GUARDIAN_URL = os.getenv("GUARDIAN_URL")
     DB_PATH = os.getenv("DB_PATH")
 
 
@@ -23,8 +27,9 @@ def set_emb_llm():
         llm = ChatOpenAI(base_url=COMPLETION_URL, model=COMPLETION_MODEL, temperature=0)
         print("model: ", COMPLETION_MODEL, "base_url: ", COMPLETION_URL)
     else:
-        llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-        print("model: gpt-3.5-turbo")
+        COMPLETION_MODEL = "gpt-3.5-turbo" if COMPLETION_MODEL is None else COMPLETION_MODEL
+        llm = ChatOpenAI(model=COMPLETION_MODEL, temperature=0)
+        print("model: ", COMPLETION_MODEL)
 
 
     if EMBEDDING_URL and EMBEDDING_MODEL:
@@ -32,11 +37,16 @@ def set_emb_llm():
         emb = OllamaEmbeddings(base_url=EMBEDDING_URL, model=EMBEDDING_MODEL)
         print("model: ", EMBEDDING_MODEL, "base_url: ", EMBEDDING_URL)
     else:
-        emb = OpenAIEmbeddings(model="text-embedding-3-small")
-        print("model: text-embedding-3-small")
+        EMBEDDING_MODEL = "text-embedding-3-small" if EMBEDDING_MODEL is None else EMBEDDING_MODEL
+        emb = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+        print("model: ", EMBEDDING_MODEL)
 
+    if GUARDIAN_MODEL and GUARDIAN_URL:
+        guardian_llm = ChatOllama(base_url=GUARDIAN_URL, model=GUARDIAN_MODEL)
+        print("model: ", GUARDIAN_MODEL, "base_url: ", GUARDIAN_URL)
+    else:
+        guardian_llm = llm # default to llm
     
     
     
-    
-    return emb, llm | strip_thought, DB_PATH
+    return emb, llm | strip_thought, guardian_llm, DB_PATH
