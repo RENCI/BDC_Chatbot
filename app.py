@@ -222,7 +222,6 @@ with st.chat_message('bdc-assistant'):
                     args=(prompt,)
                 )
 
-st.markdown("For more information on how this works, click here")
 if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt_button_pressed']):
     display_text = ""
     context = None
@@ -263,7 +262,7 @@ st.markdown(
 <style>
     .disclaimer {
         display: block;
-        position: fixed;
+        position: fixed !important;
         bottom: 1.5rem;
         left: 0;
         right: 1.5rem;
