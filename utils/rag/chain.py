@@ -340,7 +340,7 @@ def create_qa_rag_chain(retriever, llm):
     contextualize_q_system_prompt = """You are an assistant, called "BDC Bot", for question-answering tasks related to NHLBI BioData Catalyst®️. \
 Given a chat history and the latest user question \
 which might reference context in the chat history, formulate a standalone question \
-which can be understood without the chat history. Replace all "BDC" in user input with "BioData Catalyst". \
+which can be understood without the chat history. Replace "NHLBI BioData Catalyst®️", "BioData Catalyst", or any short form of it in user input with "BDC". \
 Do NOT answer the question, just reformulate it if needed and otherwise return it as is."""
     contextualize_q_prompt = ChatPromptTemplate.from_messages(
         [
@@ -366,7 +366,7 @@ You can use bullet points and markdown formatting if either is needed.\
 The context are retrieved based on the user query and the chat history.\
 If there is context provided, answer the question based on the context.\
 Use the term 'documentation' instead of context in your repsponses.\
-NHLBI BioData Catalyst®️ or any short form of it MUST ONLY be referred to as "BDC" in your responses.\
+DO NOT USE "NHLBI BioData Catalyst®️" or any short form of it. You MUST ONLY refer it as ```BDC``` in your responses, even if the user query is not refering it as BDC.\
 
 ### context: {context}"""
     
