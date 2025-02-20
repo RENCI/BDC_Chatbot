@@ -65,7 +65,8 @@ from langchain.retrievers import EnsembleRetriever
 
 
 from nltk.tokenize import word_tokenize
-
+import nltk
+nltk.download('punkt_tab')
 
 # class RetrieverWithScore(VectorStoreRetriever):
 #     # init with vectorstore
