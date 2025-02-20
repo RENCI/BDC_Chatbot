@@ -1,10 +1,14 @@
-FROM python:3.12 AS builder
+FROM python:3.12-slim AS builder
 
 # set working directory
 WORKDIR /app
 
-# get website source files
-RUN git clone https://github.com/stagecc/interim-bdc-website
+# Install git temporarily for cloning, then remove it
+RUN apt-get update && apt-get install -y git && \
+    git clone --depth=1 https://github.com/stagecc/interim-bdc-website temp_repo && \
+    cp -r temp_repo/* . && \
+    rm -rf temp_repo && \
+    apt-get remove -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
 # copy only requirements file to leverage caching
 COPY requirements.txt .
@@ -18,10 +22,14 @@ RUN sed -i '/allowed_comparators = \[/a\        Comparator.IN,\n        Comparat
 
 
 # --- final stage ---
-FROM python:3.12 AS runtime
+FROM python:3.12-slim AS runtime
 
-# get website source files again?
-RUN git clone https://github.com/stagecc/interim-bdc-website
+# Install git temporarily for cloning, then remove it, again
+RUN apt-get update && apt-get install -y git && \
+    git clone --depth=1 https://github.com/stagecc/interim-bdc-website temp_repo && \
+    cp -r temp_repo/* . && \
+    rm -rf temp_repo && \
+    apt-get remove -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
 # set working directory
 WORKDIR /app
