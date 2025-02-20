@@ -6,6 +6,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 # from langchain_community.embeddings import OllamaEmbeddings
 
 from langchain_ollama import OllamaEmbeddings
+
 from langchain_ollama import ChatOllama
 
 from .rag.chain import strip_thought
@@ -50,3 +51,4 @@ def set_emb_llm():
     
     
     return emb, llm | strip_thought, guardian_llm, DB_PATH
+

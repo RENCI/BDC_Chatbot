@@ -138,6 +138,12 @@ def draw_sources(sources, showSources):
 
 current_chain = default_rag_chain
 
+with st.sidebar:
+    st.header("BDC Resources")
+    st.link_button("Website", "https://biodatacatalyst.nhlbi.nih.gov/", icon="🌐", use_container_width=True)
+    st.link_button("Documentation", "https://bdcatalyst.gitbook.io/", icon="📖", use_container_width=True)
+    st.link_button("Support", "https://bdcatalyst.freshdesk.com/", icon="🛟", use_container_width=True)
+
 # Set the title for the Streamlit app
 st.image(logo, width=200)
 
@@ -237,9 +243,3 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
     st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['displayed_history'].append(('user', prompt, None))
     st.session_state['displayed_history'].append(('assistant', display_text, sources))
-
-with st.sidebar:
-    st.header("BDC Resources")
-    st.link_button("Website", "https://biodatacatalyst.nhlbi.nih.gov/", icon="🌐", use_container_width=True)
-    st.link_button("Documentation", "https://bdcatalyst.gitbook.io/", icon="📖", use_container_width=True)
-    st.link_button("Support", "https://bdcatalyst.freshdesk.com/", icon="🛟", use_container_width=True)

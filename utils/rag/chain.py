@@ -107,6 +107,7 @@ from nltk.tokenize import word_tokenize
 #         return docs
 
 
+
 # TODO: replace with yaml file
 topics_list = ["FISMA", "Covid-19"]
 
@@ -146,6 +147,7 @@ def merge_responses(x):
 
 
 
+
 def strip_thought(message: AIMessage):
     messages = message.content.split('</think>')
     thought = messages[0].replace('<think>', '').replace('</think>', '')
@@ -155,8 +157,8 @@ def strip_thought(message: AIMessage):
 
 
 
-
 class VectorStoreRetrieverWithScore(VectorStoreRetriever):
+
     # init with vectorstore
     def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
         """Initialize with vectorstore."""
