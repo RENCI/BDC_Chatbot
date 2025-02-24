@@ -128,11 +128,11 @@ with st.sidebar:
     st.link_button("Support", "https://bdcatalyst.freshdesk.com/", icon="🛟", use_container_width=True)
 
 introduction = """
-This is a test of the BDCBot in development by RENCI.
+This is a prototype of the BDCBot in development at RENCI.
 If you are a tester, please complete [this form](https://example.com) after your test.
 If you have navigated to this page in error, please close your browser window.
-If you wish to reach someone about this test, please contact 
-[David Borland](mailto:borland@renci.org) or [Nathalie Volkheimer](mailto:natvolk@renci.org).
+If you wish to reach someone regarding this prototype, please contact 
+[David Borland](mailto:borland@renci.org) or [Nathalie Volkheimer](mailto:nathalie@renci.org).
 
 ---
 """
