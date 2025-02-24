@@ -139,7 +139,7 @@ If you wish to reach someone about this test, please contact
 
 # Set the title for the Streamlit app
 # st.image(logo, width=200)
-st.text('[BDCbot test]')
+st.text('[BDCBOT TEST]')
 st.markdown(introduction)
 
 # Initialize chat history
