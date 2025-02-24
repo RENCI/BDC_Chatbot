@@ -6,7 +6,6 @@ from utils.rag.chain import rag_chain_constructor, construct_time_filter
 from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
-from components.preview_link import preview_link
 
 set_debug(True)
 
@@ -111,12 +110,20 @@ def parse_text(answer, context) -> str:
 
     return output, sources
 
+def source_link(url, title, type):
+    return st.text(f"[{type}] {title}")
+
 def draw_sources(sources, showSources):
-    if len(sources) == 0: 
-        return    
+    if not sources:
+        return
     with st.expander(f"Source{'s' if len(sources) > 1 else ''}", expanded=showSources):
+        source_lines = []
         for source in sources:
-            preview_link(source['url'], source['title'], source["doc_type"])
+            # Create a formatted line for each source
+            line = f"[{source['doc_type']}] <a href='{source['url']}' target='_blank'>{source['url']}</a>"
+            source_lines.append(line)
+        # Join lines with a line break and render via markdown
+        st.markdown("<br>".join(source_lines), unsafe_allow_html=True)
 
 current_chain = default_rag_chain
 
@@ -213,7 +220,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         display_text, sources = parse_text(answer, context)
         response_container.markdown(display_text, unsafe_allow_html=True)
 
-        draw_sources(sources, True)
+        draw_sources(sources, False)
     
     st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['displayed_history'].append(('user', prompt, None))
