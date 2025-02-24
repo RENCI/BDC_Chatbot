@@ -7,7 +7,7 @@ from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
 from components.preview_link import preview_link
-import math, random
+import math
 
 set_debug(True)
 
