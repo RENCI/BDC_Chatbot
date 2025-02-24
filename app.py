@@ -157,7 +157,7 @@ or sleep research journey.
 
 I have been trained on public websites, but also specifically on approved
 BDC documentation. My answers will be as accurate and as current as the
-documentation I am trained upon. If yu want to double check my answers I
+documentation I am trained upon. If you want to double check my answers I
 would encourage you to check the sources outlined in my responses and/or
 contact the BDC HelpDesk (link). BDC’s support team isn’t just AI powered;
 we have humans to help you one on one in live video chat by appointment too!
