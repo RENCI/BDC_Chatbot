@@ -217,17 +217,20 @@ class BM25RetrieverWithScore(BM25Retriever):
     # def from_documents(cls, emb, **kwargs: Any) -> BM25Retriever:
     #     cls.emb = emb
     #     return super(BM25RetrieverWithScore, cls).from_documents(**kwargs)
-    
+    emb: Any = Field(default=None, exclude=True)
+        
     def __init__(self, emb=None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.emb = emb
     
+
+
+    
     @classmethod
-    def from_documents(cls, emb, **kwargs: Any):
+    def from_documents(cls, emb, **kwargs: Any) -> "BM25RetrieverWithScore":
         retriever = super(BM25RetrieverWithScore, cls).from_documents(**kwargs)
         retriever.emb = emb
         return retriever
-    
     
     # declear emb
     # emb = None
