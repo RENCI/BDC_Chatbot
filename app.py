@@ -176,20 +176,19 @@ Not sure what to ask? Here are some example questions.
 """
 
 sample_prompts = [
-    "How can I find datasets in BDC?",
+    #"How can I find datasets in BDC?",
     "Can I download data from BDC?",
     "Does BDC have TOPMed data in it?",
     "Where can I find the RECOVER dataset?",
-    "Does BDC use AWS, Azure or Google?",
+    #"Does BDC use AWS, Azure or Google?",
     "Does BDC cost money to use?",
-    "Can I import tools into BDC?",
+    #"Can I import tools into BDC?",
     "Does BDC meet the Fisma-moderate security environment requirements?",
     "Can I bring PHI into BDC?",
 ]
 
 # Randomly select six prompts
 #random_prompts = random.sample(sample_prompts, 4)
-use_prompts = sample_prompts[0:6]
 
 # Callback function to update the state
 def handle_click_sample_prompt(prompt):
@@ -222,10 +221,10 @@ with st.chat_message('bdc-assistant'):
         )
         
         # sample prompt buttons
-        num_rows = math.floor(len(use_prompts) / 2)
+        num_rows = math.floor(len(sample_prompts) / 2)
         button_rows = [st.columns(2), st.columns(2), st.columns(2)]
         for r, row in enumerate(button_rows):
-            this_row_prompts = use_prompts[0 + r*2:2 + r*2]
+            this_row_prompts = sample_prompts[0 + r*2:2 + r*2]
             for c, prompt in enumerate(this_row_prompts):
                 button_rows[r][c].button(
                     prompt,
