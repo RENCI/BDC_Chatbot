@@ -7,7 +7,7 @@ from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
 from components.preview_link import preview_link
-import random
+import math, random
 
 set_debug(True)
 
@@ -15,6 +15,16 @@ st.set_page_config(
     page_title="BDC Bot",
     page_icon="static/bot-light-32x32.png"
 )
+
+# Hide Streamlit menu
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
 
 with open( "style.css" ) as css:
     st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
@@ -121,11 +131,11 @@ def draw_sources(sources, showSources):
 
 current_chain = default_rag_chain
 
-with st.sidebar:
-    st.header("BDC Resources")
-    st.link_button("Website", "https://biodatacatalyst.nhlbi.nih.gov/", icon="🌐", use_container_width=True)
-    st.link_button("Documentation", "https://bdcatalyst.gitbook.io/", icon="📖", use_container_width=True)
-    st.link_button("Support", "https://bdcatalyst.freshdesk.com/", icon="🛟", use_container_width=True)
+#with st.sidebar:
+#    st.header("BDC Resources")
+#    st.link_button("Website", "https://biodatacatalyst.nhlbi.nih.gov/", icon="🌐", use_container_width=True)
+#    st.link_button("Documentation", "https://bdcatalyst.gitbook.io/", icon="📖", use_container_width=True)
+#    st.link_button("Support", "https://bdcatalyst.freshdesk.com/", icon="🛟", use_container_width=True)
 
 introduction = """
 This is a prototype of the BDCBot in development at RENCI.
@@ -166,7 +176,7 @@ Not sure what to ask? Here are some example questions.
 """
 
 sample_prompts = [
-    "How can I find the datasets in BDC?",
+    "How can I find datasets in BDC?",
     "Can I download data from BDC?",
     "Does BDC have TOPMed data in it?",
     "Where can I find the RECOVER dataset?",
@@ -178,7 +188,8 @@ sample_prompts = [
 ]
 
 # Randomly select six prompts
-random_prompts = random.sample(sample_prompts, 4)
+#random_prompts = random.sample(sample_prompts, 4)
+use_prompts = sample_prompts[0:6]
 
 # Callback function to update the state
 def handle_click_sample_prompt(prompt):
@@ -211,9 +222,10 @@ with st.chat_message('bdc-assistant'):
         )
         
         # sample prompt buttons
-        button_rows = [st.columns(2), st.columns(2)]
+        num_rows = math.floor(len(use_prompts) / 2)
+        button_rows = [st.columns(2), st.columns(2), st.columns(2)]
         for r, row in enumerate(button_rows):
-            this_row_prompts = random_prompts[0 + r*2:2 + r*2]
+            this_row_prompts = use_prompts[0 + r*2:2 + r*2]
             for c, prompt in enumerate(this_row_prompts):
                 button_rows[r][c].button(
                     prompt,
