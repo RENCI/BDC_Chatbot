@@ -201,7 +201,7 @@ Not sure what to ask? Here are some example questions.
 """
 
 sample_prompts = [
-    #"How can I find datasets in BDC?",
+    "How can I find datasets in BDC?",
     "Can I download data from BDC?",
     "Does BDC have TOPMed data in it?",
     "Where can I find the RECOVER dataset?",
@@ -209,7 +209,7 @@ sample_prompts = [
     "Does BDC cost money to use?",
     #"Can I import tools into BDC?",
     "Does BDC meet the Fisma-moderate security environment requirements?",
-    "Can I bring PHI into BDC?",
+    # "Can I bring PHI into BDC?",
 ]
 
 # Randomly select six prompts
