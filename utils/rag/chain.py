@@ -212,6 +212,26 @@ class BM25RetrieverWithScore(BM25Retriever):
     #     cls.emb = emb
     #     return cls(**kwargs)
     
+    # # inherit from BM25Retriever
+    # @classmethod
+    # def from_documents(cls, emb, **kwargs: Any) -> BM25Retriever:
+    #     cls.emb = emb
+    #     return super(BM25RetrieverWithScore, cls).from_documents(**kwargs)
+    
+    def __init__(self, emb=None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.emb = emb
+    
+    @classmethod
+    def from_documents(cls, emb, **kwargs: Any):
+        retriever = super(BM25RetrieverWithScore, cls).from_documents(**kwargs)
+        retriever.emb = emb
+        return retriever
+    
+    
+    # declear emb
+    # emb = None
+    
     
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -421,7 +441,7 @@ def create_main_chain(retriever, llm, guardian_llm, emb, vectorstore: VectorStor
         documents = [Document(page_content=doc, metadata=meta) for doc, meta in zip(vectorstore.get()["documents"], vectorstore.get()["metadatas"])]
         
         # TODO: add similarity score to metadata
-        bm25_retriever = BM25RetrieverWithScore.from_documents(documents, 
+        bm25_retriever = BM25RetrieverWithScore.from_documents(documents = documents, 
                                                       k=retriever_top_k-emb_retriever_top_k, 
                                                       preprocess_func=word_tokenize, emb=emb)
         
