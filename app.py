@@ -269,7 +269,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
             if sources:
                 draw_sources(sources, False)
     
-    with st.chat_message("using-bdc"):
+    with st.chat_message('using-bdc'):
         st.markdown(prompt)
 
     with st.chat_message('bdc-assistant'):
@@ -297,7 +297,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         draw_sources(sources, False)
     
     st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
-    st.session_state['displayed_history'].append(('user', prompt, None))
+    st.session_state['displayed_history'].append(('using-bdc', prompt, None))
     st.session_state['displayed_history'].append(('bdc-assistant', display_text, sources))
 
 st.markdown(
