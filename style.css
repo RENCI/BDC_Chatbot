@@ -28,19 +28,3 @@ a {
 .stAppDeployButton {
     display: none;
 }
-
-.stBottom::after {
-    content: "BDCbot responses are AI-generated from public sources and may not be accurate.";
-    display: block;
-    position: relative;
-    bottom: 1.5rem;
-    left: 0;
-    right: 0;
-    height: 0;
-    margin-top: -1rem;
-    text-align: center;
-    font-style: italic;
-    font-size: 80%;
-    color: #988;
-    z-index: 9999;
-}
