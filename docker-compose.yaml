@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  renci-chatbot:
+  bdc-chatbot:
     build:
       context: .
       dockerfile: Dockerfile
-    image: renci-chatbot:latest
+    image: bdc-chatbot:latest
     ports:
       - "8501:8501"
     env_file:
