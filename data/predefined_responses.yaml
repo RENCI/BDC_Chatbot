@@ -1,0 +1,9 @@
+FISMA:
+  response: "NHLBI BioData Catalyst® (BDC) supports data and analysis in a secure, FISMA-moderate environment. BDC security controls adhere to [NIH's Implementation Update for Data Management and Access Practices Under the Genomic Data Sharing Policy (NOT-OD-24-157)](https://grants.nih.gov/grants/guide/notice-files/NOT-OD-24-157.html)."
+  flag: "r"
+  source: null
+
+Covid-19:
+  response: "Covid-19 response placeholder (append)"
+  flag: "a"
+  source: null

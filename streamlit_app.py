@@ -74,7 +74,7 @@ from langchain_community.embeddings import OllamaEmbeddings
 
 
 
-from utils.rag.chain import rag_chain_constructor, construct_time_filter
+from utils.rag.chain import create_main_chain, create_time_filter
 from utils import set_emb_llm
 
 
@@ -147,14 +147,14 @@ $(document).ready(function() {
 
 @st.cache_resource
 def init_vars(retriever_top_k = 5, default_rag_filter = None):
-    emb, llm, DB_PATH = set_emb_llm()
+    emb, llm, guardian_llm, DB_PATH = set_emb_llm()
 
     
 
     vectorstore = Chroma(persist_directory=DB_PATH,embedding_function=emb)
 
     if default_rag_filter is None:
-        default_rag_filter = construct_time_filter()
+        default_rag_filter = create_time_filter()
     
     # print("default_rag_filter: ", default_rag_filter)
     
@@ -166,7 +166,7 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None):
     # default_retriever = vectorstore.as_retriever(search_kwargs = {"k": retriever_top_k})
     
     
-    return llm, emb, vectorstore, default_retriever, retriever_top_k
+    return llm, guardian_llm, emb, vectorstore, default_retriever, retriever_top_k
 
 
 
@@ -175,10 +175,10 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None):
 
 
 
-llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=10)
+llm, guardian_llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=10)
 
 
-default_rag_chain = rag_chain_constructor(default_retriever, llm, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5)
+default_rag_chain = create_main_chain(default_retriever, llm, guardian_llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5)
 
 
 
@@ -423,6 +423,12 @@ if prompt := st.chat_input("Ask a question"):
             if 'answer' in chunk:
                 display_text += chunk['answer']
             container.markdown(display_text)
+        
+        # if stream has flag, then display the flag
+        if 'flag' in chunk:
+            print("flag: ", chunk['flag'])
+        else:
+            print("flag: NA")
         
         # res = current_chain.invoke({"input": prompt, "chat_history": st.session_state['history']})
         # context = res["context"]

@@ -1,14 +1,15 @@
 import streamlit as st
 from langchain_chroma import Chroma
 from langchain_core.messages import HumanMessage, AIMessage
-from langchain.globals import set_debug
-from utils.rag.chain import rag_chain_constructor, construct_time_filter
+from langchain.retrievers.document_compressors import FlashrankRerank
+from langchain.globals import set_debug, set_verbose
+from utils.rag.chain import create_main_chain, create_time_filter
 from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
 import math
 
-set_debug(True)
+set_verbose(True)
 
 st.set_page_config(
     page_title="BDC Bot",
@@ -33,13 +34,13 @@ bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
 
 @st.cache_resource
-def init_vars(retriever_top_k = 5, default_rag_filter = None):
-    emb, llm, DB_PATH = set_emb_llm()
+def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
+    emb, llm, guardian_llm, DB_PATH = set_emb_llm()
 
     vectorstore = Chroma(persist_directory=DB_PATH,embedding_function=emb)
 
     if default_rag_filter is None:
-        default_rag_filter = construct_time_filter()
+        default_rag_filter = create_time_filter()
     
     default_retriever = vectorstore.as_retriever(
         search_kwargs = {"k": retriever_top_k, 
@@ -47,11 +48,21 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None):
                          })
     default_retriever.search_type = "similarity_score_threshold"
     
-    return llm, emb, vectorstore, default_retriever, retriever_top_k
+    if rerank_top_k > 0:
+        compressor = FlashrankRerank(top_n=rerank_top_k, model = "ms-marco-MiniLM-L-12-v2")
+    elif rerank_top_k == 0: 
+        compressor = FlashrankRerank(top_n=retriever_top_k, model = "ms-marco-MiniLM-L-12-v2")
+    else:
+        compressor = None
+    
+    
+    return llm, guardian_llm, emb, vectorstore, default_retriever, retriever_top_k, compressor
 
-llm, emb, vectorstore, default_retriever, retriever_top_k = init_vars(retriever_top_k=10)
+llm, guardian_llm, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20, 
+                                                                                  rerank_top_k=10)
 
-default_rag_chain = rag_chain_constructor(default_retriever, llm, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5)
+default_rag_chain = create_main_chain(default_retriever, llm, guardian_llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
+
 
 doc_type_dict = defaultdict(lambda: "Source")
 doc_type_dict['page'] = "BDC Web Page"
@@ -62,6 +73,12 @@ doc_type_dict['event'] = "BDC Event"
 def filter_sources(docs):
     # Split by the maximum distance between scores
     # XXX: Could use something more sophisticated such as Otsu thresholding...
+    
+    return docs
+    
+    # sort docs by score
+    docs.sort(key=lambda x: x.metadata["score"], reverse=True)
+    
     max_diff = 0
     max_diff_index = 0
     for i in range(len(docs)-1):        
@@ -104,7 +121,8 @@ def parse_text(answer, context) -> str:
                 'doc_type': doc.metadata['doc_type'],    
                 'metadata': doc.metadata,
                 'content': doc.page_content,
-                'score': doc.metadata['score']   
+                'retriever_type': doc.metadata.get('retriever_type', 'NA'),
+                'score': doc.metadata.get('score', 'NA')
             }
             
             if 'title' in doc.metadata:
@@ -183,7 +201,7 @@ Not sure what to ask? Here are some example questions.
 """
 
 sample_prompts = [
-    #"How can I find datasets in BDC?",
+    "How can I find datasets in BDC?",
     "Can I download data from BDC?",
     "Does BDC have TOPMed data in it?",
     "Where can I find the RECOVER dataset?",
@@ -191,7 +209,7 @@ sample_prompts = [
     "Does BDC cost money to use?",
     #"Can I import tools into BDC?",
     "Does BDC meet the Fisma-moderate security environment requirements?",
-    "Can I bring PHI into BDC?",
+    # "Can I bring PHI into BDC?",
 ]
 
 # Randomly select six prompts
@@ -251,7 +269,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
             if sources:
                 draw_sources(sources, False)
     
-    with st.chat_message("using-bdc"):
+    with st.chat_message('using-bdc'):
         st.markdown(prompt)
 
     with st.chat_message('bdc-assistant'):
@@ -262,17 +280,24 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         
         print("current_chain.invoke: \n", res)
 
-        context = res["context"]
+        
         answer = res["answer"]
+        
+        context = res.get("context", [])
+        display_answer = res.get("display_answer", answer)
+        
+        # print("flag: ", res["flag"])
+        
+        
         display_text += answer
 
-        display_text, sources = parse_text(answer, context)
+        display_text, sources = parse_text(display_answer, context)
         response_container.markdown(display_text, unsafe_allow_html=True)
 
         draw_sources(sources, False)
     
     st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
-    st.session_state['displayed_history'].append(('user', prompt, None))
+    st.session_state['displayed_history'].append(('using-bdc', prompt, None))
     st.session_state['displayed_history'].append(('bdc-assistant', display_text, sources))
 
 st.markdown(
