@@ -171,3 +171,4 @@ llm_docs/
 .vscode/
 
 .env*
+!.env_example

@@ -32,10 +32,12 @@ diff-match-patch==20230430
 distro==1.9.0
 durationpy==0.9
 executing==2.1.0
+faiss-cpu==1.9.0.post1
 Faker==25.9.2
 fastapi==0.115.4
 fastembed==0.4.2
 filelock==3.16.1
+FlashRank==0.2.10
 flatbuffers==24.3.25
 fqdn==1.5.1
 frozenlist==1.5.0
@@ -44,6 +46,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 google-auth==2.35.0
 googleapis-common-protos==1.65.0
+grandalf==0.8
 greenlet==3.1.1
 griffe==0.36.9
 grpcio==1.67.1
@@ -154,6 +157,7 @@ pydash==7.0.7
 pydeck==0.9.1
 Pygments==2.18.0
 PyJWT==2.10.0
+pyparsing==3.2.1
 PyPika==0.48.9
 pyproject_hooks==1.2.0
 python-dateutil==2.9.0.post0
@@ -161,6 +165,7 @@ python-dotenv==1.0.1
 pytz==2024.2
 PyYAML==6.0.2
 pyzmq==26.2.0
+rank-bm25==0.2.2
 referencing==0.35.1
 regex==2024.9.11
 requests==2.32.3
@@ -173,6 +178,8 @@ rpds-py==0.20.1
 rsa==4.9
 rstr==3.2.2
 safetensors==0.4.5
+scikit-learn==1.6.1
+scipy==1.15.1
 semver==3.0.2
 sentencepiece==0.2.0
 setuptools==75.3.0
@@ -188,6 +195,7 @@ starlette==0.41.2
 streamlit==1.39.0
 sympy==1.13.1
 tenacity==9.0.0
+threadpoolctl==3.5.0
 tiktoken==0.8.0
 tokenizers==0.20.1
 toml==0.10.2

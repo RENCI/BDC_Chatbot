@@ -42,7 +42,7 @@ from .chroma.utils import create_chroma_client
 
 from . import set_emb_llm
 
-emb, llm, DB_PATH = set_emb_llm()
+emb, llm, guardian_llm, DB_PATH = set_emb_llm()
 
 
 shutil.rmtree(DB_PATH, ignore_errors=True) 
