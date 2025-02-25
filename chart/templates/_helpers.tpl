@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "renci-chatbot.name" -}}
+{{- define "bdc-chatbot.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "renci-chatbot.fullname" -}}
+{{- define "bdc-chatbot.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "renci-chatbot.chart" -}}
+{{- define "bdc-chatbot.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "renci-chatbot.labels" -}}
-helm.sh/chart: {{ include "renci-chatbot.chart" . }}
-{{ include "renci-chatbot.selectorLabels" . }}
+{{- define "bdc-chatbot.labels" -}}
+helm.sh/chart: {{ include "bdc-chatbot.chart" . }}
+{{ include "bdc-chatbot.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "renci-chatbot.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "renci-chatbot.name" . }}
+{{- define "bdc-chatbot.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "bdc-chatbot.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "renci-chatbot.serviceAccountName" -}}
+{{- define "bdc-chatbot.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "renci-chatbot.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "bdc-chatbot.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

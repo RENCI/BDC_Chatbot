@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "renci-chatbot.fullname" . }}
+  name: {{ include "bdc-chatbot.fullname" . }}
   labels:
-    {{- include "renci-chatbot.labels" . | nindent 4 }}
+    {{- include "bdc-chatbot.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -12,4 +12,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "renci-chatbot.selectorLabels" . | nindent 4 }}
+    {{- include "bdc-chatbot.selectorLabels" . | nindent 4 }}
