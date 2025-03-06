@@ -62,7 +62,7 @@ from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 
 
-
+import re
 
 from nltk.tokenize import word_tokenize
 import nltk
@@ -130,12 +130,14 @@ pre_defined_sources = {
 def merge_responses(x):
     # append, display with added disclaimer
     if x["flag"] == 'a':
-        x["display_answer"] = f"{x['answer']}\n\n<disclaimer>{x['response']}</disclaimer>"
+        # x["display_answer"] = f"{x['answer']}\n\n<disclaimer>{x['response']}</disclaimer>"
+        x["display_answer"] = f"{x['answer']}\n\n{x['response']}"
         return x
     # replace, display replaced text
     elif x["flag"] == 'r':
         x["answer"] = f"Answer was replaced with predefined response: \n{x['response']}"
-        x["display_answer"] = f"<replaced>{x['response']}</replaced>"
+        # x["display_answer"] = f"<replaced>{x['response']}</replaced>"
+        x["display_answer"] = f"{x['response']}"
         return x
     # default, display answer
     elif x["flag"] == 'd':
@@ -412,7 +414,58 @@ DO NOT USE "NHLBI BioData Catalyst®️" or any short form of it. You MUST ONLY 
 
 
 
+def create_bdc_response_regex_chain():
+    def process_bdc_names(x):
+        
+        def remove(match):
+            pre = " " if match.group('pre') else ""
+            post = " " if match.group('post') else ""
+            return " " if pre and post else pre + post
+
+        def replace(match):
+            pre = " " if match.group('pre') else ""
+            post = " " if match.group('post') else ""
+            return (" BDC " if pre and post else pre + "BDC" + post)
+
+        
+        if "answer" in x and x["answer"]:
+            text = x["answer"]
+            # remove terms in parentheses
+            text = re.sub(
+                r'(?P<pre>\s*)\(\s*(?:(?:NHLBI\s+)?BioData\s+Catalyst(?:®️)?|BDC)\s*\)(?P<post>\s*)',
+                remove,
+                text
+            )
+            
+            # replace terms with "BDC"
+            text = re.sub(
+                r'(?P<pre>\s*)(?:NHLBI\s+)?BioData\s+Catalyst(?:®️)?(?P<post>\s*)',
+                replace,
+                text
+            )
+
+            x["answer"] = text
+            
+        return x
     
+    return RunnableLambda(process_bdc_names)
+
+
+def create_bdc_response_llm_chain(llm):
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """Rewrite the following text, replacing all instances of "NHLBI BioData Catalyst®️", "BioData Catalyst", and any short form of it with the abbreviation "BDC". If a paratheses surrounded "(BDC)" after the replacement, remove it. If there is clear indication that the text is only explaining what the abbreviation stands for, keep it as is.
+        Keep all other content exactly the same, including formatting, punctuation, and line breaks.
+        Return ONLY the rewritten text without any additional explanation or commentary."""),
+        ("human", "{text}")
+    ])
+    
+    def process_bdc_names(x):
+        if "answer" in x and x["answer"]:
+            # Use LLM to rewrite the text
+            x["answer"] = (prompt | llm | StrOutputParser()).invoke({"text": x["answer"]})
+        return x
+    
+    return RunnableLambda(process_bdc_names)
 
 
 
@@ -490,7 +543,11 @@ def create_main_chain(retriever, llm, guardian_llm, emb, vectorstore: VectorStor
     
     # return guardrails | predefined_response_chain | response_branch
     
-    main_chain = predefined_response_chain | response_branch | RunnableLambda(merge_responses)
+    main_chain = (predefined_response_chain 
+                  | response_branch 
+                  | create_bdc_response_regex_chain()
+                #   | create_bdc_response_llm_chain(llm)
+                  | RunnableLambda(merge_responses))
     
     # main_chain.get_graph().print_ascii()
     
