@@ -9,6 +9,7 @@ from collections import defaultdict
 from langchain.load.dump import dumps
 import numpy as np
 import math
+from st_copy_to_clipboard import st_copy_to_clipboard
 
 set_verbose(True)
 
@@ -298,6 +299,9 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
 
         display_text, sources = parse_text(display_answer, context)
         response_container.markdown(display_text, unsafe_allow_html=True)
+        col1, col2 = st.columns([8, 1])
+        with col2:
+            st_copy_to_clipboard(display_text)
 
         draw_sources(sources, False)
     
