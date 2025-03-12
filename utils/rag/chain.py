@@ -92,7 +92,7 @@ def merge_responses(x):
 def fix_data_type(x):
     # Document to dict
     # relevance_score to float
-    if "context" in x and x["context"]:
+    if "context" in x:
         print("have context")
         for i, doc in enumerate(x["context"]):
             doc = doc.dict()

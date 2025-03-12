@@ -51,12 +51,12 @@ def filter_sources(docs):
     return docs
     
     # sort docs by score
-    docs.sort(key=lambda x: x.metadata["score"], reverse=True)
+    docs.sort(key=lambda x: x["metadata"]["score"], reverse=True)
     
     max_diff = 0
     max_diff_index = 0
     for i in range(len(docs)-1):        
-        diff = docs[i+1].metadata["score"] - docs[i].metadata["score"]
+        diff = docs[i+1]["metadata"]["score"] - docs[i]["metadata"]["score"]
 
         if (diff > max_diff):
             max_diff = diff
@@ -83,31 +83,31 @@ def parse_text(answer, context) -> str:
     for doc in top_docs:
         url = ""
 
-        # source = doc.metadata["file_path"]
-        if 'page_url' in doc.metadata:
-            url = doc.metadata['page_url']
-        elif 'remote_file_path' in doc.metadata:
-            url = doc.metadata['remote_file_path'] 
+        # source = doc["metadata"]["file_path"]
+        if 'page_url' in doc["metadata"]:
+            url = doc["metadata"]['page_url']
+        elif 'remote_file_path' in doc["metadata"]:
+            url = doc["metadata"]['remote_file_path'] 
         
         if not any(source.get('url') == url for source in sources):
             source = {
                 'url': url,
-                'doc_type': doc.metadata['doc_type'],    
-                'metadata': doc.metadata,
-                'content': doc.page_content,
-                'retriever_type': doc.metadata.get('retriever_type', 'NA'),
-                'score': doc.metadata.get('score', 'NA')
+                'doc_type': doc["metadata"]['doc_type'],    
+                'metadata': doc["metadata"],
+                'content': doc["page_content"],
+                'retriever_type': doc["metadata"].get('retriever_type', 'NA'),
+                'score': doc["metadata"].get('score', 'NA')
             }
             
-            if 'title' in doc.metadata:
-                source['title'] = doc.metadata['title']
-            elif 'name' in doc.metadata:
-                source['title'] = doc.metadata['name']
-            elif 'page_url' in doc.metadata:
+            if 'title' in doc["metadata"]:
+                source['title'] = doc["metadata"]['title']
+            elif 'name' in doc["metadata"]:
+                source['title'] = doc["metadata"]['name']
+            elif 'page_url' in doc["metadata"]:
                 # only use the last part of the page_url
-                source['title'] = doc.metadata['page_url'].split('/')[-1]
+                source['title'] = doc["metadata"]['page_url'].split('/')[-1]
             else:
-                source['title'] = doc.metadata['file_path']
+                source['title'] = doc["metadata"]['file_path']
             
             sources.append(source)
 
@@ -258,6 +258,12 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         answer = res["answer"]
         
         context = res.get("context", [])
+        
+        for i, doc in enumerate(context):
+            context[i] = doc.dict()
+        
+        
+        
         display_answer = res.get("display_answer", answer)
         
         # print("flag: ", res["flag"])
