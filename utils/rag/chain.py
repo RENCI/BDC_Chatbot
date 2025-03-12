@@ -37,17 +37,6 @@ from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 
 
 
-# from langchain_core.runnables import chain
-# @chain
-# def retriever(query: str) -> List[Document]:
-#     docs, scores = zip(*vectorstore.similarity_search_with_score(query))
-#     for doc, score in zip(docs, scores):
-#         doc.metadata["score"] = score
-
-#     return docs
-
-
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores.base import VectorStoreRetriever, VectorStore
@@ -62,80 +51,34 @@ from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 
 
-
+import re
 
 from nltk.tokenize import word_tokenize
 import nltk
 nltk.download('punkt_tab')
 
-# class RetrieverWithScore(VectorStoreRetriever):
-#     # init with vectorstore
-#     def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
-#         """Initialize with vectorstore."""
-#         super().__init__(vectorstore=vectorstore, **kwargs)
-    
-    
-#     def _get_docs_with_query(
-#         self, query: str, search_kwargs: Dict[str, Any]
-#     ) -> List[Document]:
-#         """Get docs, adding score information."""
-#         # docs, scores = zip(
-#         #     *self.vectorstore.similarity_search_with_relevance_scores(query, **search_kwargs)
-#         # )
-#         docs, scores = zip(
-#             *self.vectorstore.similarity_search_with_score(query, **search_kwargs)
-#         )
-        
-        
-#         for doc, score in zip(docs, scores):
-#             doc.metadata["score"] = score
-
-#         # print("\t\t# of docs: ", len(docs))
-#         # print(docs)
-#         # # sort by score highest to lowest
-#         # docs = sorted(docs, key=lambda x: x.metadata["score"], reverse=True)
-        
-#         # # search_kwargs, filter by score_threshold, with at least 1 doc
-#         # new_docs = [doc for doc in docs if doc.metadata["score"] >= search_kwargs["score_threshold"]]
-#         # if len(new_docs) == 0:
-#         #     # pick the highest scoring doc
-#         #     new_docs = [docs[0],]
-        
-#         # print("\t\t# of docs: ", len(new_docs))
-#         # return new_docs
-        
-        
-#         return docs
+import yaml
 
 
 
-# TODO: replace with yaml file
-topics_list = ["FISMA", "Covid-19"]
-
-pre_defined_response = {
-    "FISMA": "NHLBI BioData Catalyst® (BDC) supports data and analysis in a secure, FISMA-moderate environment. BDC security controls adhere to [NIH's Implementation Update for Data Management and Access Practices Under the Genomic Data Sharing Policy (NOT-OD-24-157)](https://grants.nih.gov/grants/guide/notice-files/NOT-OD-24-157.html).",
-    "Covid-19": "Covid-19 response placeholder (append)"
-}
-pre_defined_flags = {
-    "FISMA": 'r',
-    "Covid-19": 'a'
-}
-pre_defined_sources = {
-    "FISMA": "FISMA source placeholder (replace)",
-    "Covid-19": None
-}
-
-
+def load_yaml(yaml_path: str):
+    with open(yaml_path) as stream:
+        try:
+            return yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
 
 def merge_responses(x):
     # append, display with added disclaimer
     if x["flag"] == 'a':
-        x["display_answer"] = f"{x['answer']}\n\n<disclaimer>{x['response']}</disclaimer>"
+        # x["display_answer"] = f"{x['answer']}\n\n<disclaimer>{x['response']}</disclaimer>"
+        x["display_answer"] = f"{x['answer']}\n\n{x['response']}"
         return x
     # replace, display replaced text
     elif x["flag"] == 'r':
         x["answer"] = f"Answer was replaced with predefined response: \n{x['response']}"
-        x["display_answer"] = f"<replaced>{x['response']}</replaced>"
+        # x["display_answer"] = f"<replaced>{x['response']}</replaced>"
+        x["display_answer"] = f"{x['response']}"
         return x
     # default, display answer
     elif x["flag"] == 'd':
@@ -201,22 +144,7 @@ from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 
 
 class BM25RetrieverWithScore(BM25Retriever):
-    # # init with vectorstore
-    # def __init__(self, emb, **kwargs: Any) -> None:
-    #     """Initialize with vectorstore."""
-    #     super().__init__(**kwargs)
-    #     self.emb = emb
-    
-    # @classmethod
-    # def from_documents(cls, emb=None, **kwargs: Any) -> BM25Retriever:
-    #     cls.emb = emb
-    #     return cls(**kwargs)
-    
-    # # inherit from BM25Retriever
-    # @classmethod
-    # def from_documents(cls, emb, **kwargs: Any) -> BM25Retriever:
-    #     cls.emb = emb
-    #     return super(BM25RetrieverWithScore, cls).from_documents(**kwargs)
+
     emb: Any = Field(default=None, exclude=True)
         
     def __init__(self, emb=None, **kwargs: Any) -> None:
@@ -308,11 +236,9 @@ class TopicClassification(BaseModel):
         return self
 
 
-def create_predefined_response_chain(
-    topics_list: List[str],
-    responses_dict: dict[str, str],
-    flags_dict: dict[str, str],
-    llm):
+def create_predefined_response_chain(predefined_responses, llm):
+    
+    topics_list = list(predefined_responses.keys())
 
     classifier_chain = create_topic_classifier_chain(topics_list, llm)
     
@@ -323,8 +249,9 @@ def create_predefined_response_chain(
             "chat_history": x["chat_history"],
             "context": [],
             "topic": x["topic"],
-            "response": responses_dict[x["topic"]],
-            "flag": flags_dict[x["topic"]]
+            "response": predefined_responses[x["topic"]]["response"],
+            "flag": predefined_responses[x["topic"]]["flag"],
+
         }
     )
 
@@ -335,7 +262,8 @@ def create_predefined_response_chain(
             "context": [],
             "topic": x["topic"],
             "response": None,
-            "flag": 'd'
+            "flag": 'd',
+
         }
     )
     # endregion: predefined branch and fallback
@@ -412,7 +340,58 @@ DO NOT USE "NHLBI BioData Catalyst®️" or any short form of it. You MUST ONLY 
 
 
 
+def create_bdc_response_regex_chain():
+    def process_bdc_names(x):
+        
+        def remove(match):
+            pre = " " if match.group('pre') else ""
+            post = " " if match.group('post') else ""
+            return " " if pre and post else pre + post
+
+        def replace(match):
+            pre = " " if match.group('pre') else ""
+            post = " " if match.group('post') else ""
+            return (" BDC " if pre and post else pre + "BDC" + post)
+
+        
+        if "answer" in x and x["answer"]:
+            text = x["answer"]
+            # remove terms in parentheses
+            text = re.sub(
+                r'(?P<pre>\s*)\(\s*(?:(?:NHLBI\s+)?BioData\s+Catalyst(?:®️)?|BDC)\s*\)(?P<post>\s*)',
+                remove,
+                text
+            )
+            
+            # replace terms with "BDC"
+            text = re.sub(
+                r'(?P<pre>\s*)(?:NHLBI\s+)?BioData\s+Catalyst(?:®️)?(?P<post>\s*)',
+                replace,
+                text
+            )
+
+            x["answer"] = text
+            
+        return x
     
+    return RunnableLambda(process_bdc_names)
+
+
+def create_bdc_response_llm_chain(llm):
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """Rewrite the following text, replacing all instances of "NHLBI BioData Catalyst®️", "BioData Catalyst", and any short form of it with the abbreviation "BDC". If a paratheses surrounded "(BDC)" after the replacement, remove it. If there is clear indication that the text is only explaining what the abbreviation stands for, keep it as is.
+        Keep all other content exactly the same, including formatting, punctuation, and line breaks.
+        Return ONLY the rewritten text without any additional explanation or commentary."""),
+        ("human", "{text}")
+    ])
+    
+    def process_bdc_names(x):
+        if "answer" in x and x["answer"]:
+            # Use LLM to rewrite the text
+            x["answer"] = (prompt | llm | StrOutputParser()).invoke({"text": x["answer"]})
+        return x
+    
+    return RunnableLambda(process_bdc_names)
 
 
 
@@ -464,8 +443,10 @@ def create_main_chain(retriever, llm, guardian_llm, emb, vectorstore: VectorStor
     
     # region: create chains
     rag_chain = create_qa_rag_chain(retriever, llm)
+    
+    predefined_responses = load_yaml('./data/predefined_responses.yaml')
 
-    predefined_response_chain = create_predefined_response_chain(topics_list, pre_defined_response, pre_defined_flags, llm)
+    predefined_response_chain = create_predefined_response_chain(predefined_responses, llm)
     
     
     
@@ -477,20 +458,14 @@ def create_main_chain(retriever, llm, guardian_llm, emb, vectorstore: VectorStor
          lambda x: {**x} # default case
     )
     
-    # response_branch = RunnableBranch(
-    #     (lambda x: x.get("flag", "") in ['d', 'a'], 
-    #      lambda x: {**x, "answer": rag_chain.invoke(x)["answer"]}),
-    #     (lambda x: x.get("flag", "") == 'w', 
-    #      lambda x: {**x, "answer": x["response"]}),
-    #     lambda x: {**x, "answer": rag_chain.invoke(x)["answer"]}
-    # )
+
+
     
-    # endregion: create chains
-    
-    
-    # return guardrails | predefined_response_chain | response_branch
-    
-    main_chain = predefined_response_chain | response_branch | RunnableLambda(merge_responses)
+    main_chain = (predefined_response_chain 
+                  | response_branch 
+                  | create_bdc_response_regex_chain()
+                #   | create_bdc_response_llm_chain(llm)
+                  | RunnableLambda(merge_responses))
     
     # main_chain.get_graph().print_ascii()
     
