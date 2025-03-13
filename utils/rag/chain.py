@@ -479,6 +479,7 @@ def create_main_chain(retriever, llm, guardian_llm, emb, vectorstore: VectorStor
                 #   | create_bdc_response_llm_chain(llm)
                   | RunnableLambda(merge_responses)
                   | RunnableLambda(fix_data_type))
+
     
     # main_chain.get_graph().print_ascii()
     

@@ -7,6 +7,7 @@ from utils.rag.chain import create_main_chain, create_time_filter
 from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
+import numpy as np
 import math
 
 set_verbose(True)
@@ -32,7 +33,6 @@ with open( "style.css" ) as css:
 # logo = "static/bdc-bot-logo-2.png"
 bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
-
 @st.cache_resource
 def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
     emb, llm, guardian_llm, DB_PATH = set_emb_llm()
@@ -70,27 +70,34 @@ doc_type_dict['fellow'] = "BDC Fellow"
 doc_type_dict['update'] = "BDC Update"
 doc_type_dict['event'] = "BDC Event"
 
+
 def filter_sources(docs):
-    # Split by the maximum distance between scores
-    # XXX: Could use something more sophisticated such as Otsu thresholding...
-    
-    return docs
-    
-    # sort docs by score
+
+    # Sort docs by score
     docs.sort(key=lambda x: x["metadata"]["score"], reverse=True)
-    
-    max_diff = 0
-    max_diff_index = 0
-    for i in range(len(docs)-1):        
-        diff = docs[i+1]["metadata"]["score"] - docs[i]["metadata"]["score"]
+    scores = [doc["metadata"]["score"] for doc in docs]
+    print("Scores: ", scores)
 
-        if (diff > max_diff):
-            max_diff = diff
-            max_diff_index = i
+    # Incrementall add documents and check for outlier using interquartile range
+    top_docs = []
+    scores = []
+    for i in range(len(docs)):
+        score = docs[i]["metadata"]["score"]
+        scores.append(score)
+        q1 = np.quantile(scores, 0.25)
+        q3 = np.quantile(scores, 0.75)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
 
-    top_docs = docs[0:max_diff_index+1]
+        print(lower_bound, score)
 
-    print(f"Kept {len(top_docs)} of {len(docs)}")
+
+        if (score < lower_bound):            
+            break
+
+        top_docs.append(docs[i])
+
+    print(f'Kept {len(top_docs)} out of {len(docs)} sources')
 
     return top_docs
 
@@ -208,7 +215,7 @@ sample_prompts = [
     #"Does BDC use AWS, Azure or Google?",
     "Does BDC cost money to use?",
     #"Can I import tools into BDC?",
-    "Does BDC meet the Fisma-moderate security environment requirements?",
+    "Does BDC meet the FISMA-moderate security environment requirements?",
     # "Can I bring PHI into BDC?",
 ]
 
