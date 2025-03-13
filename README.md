@@ -20,15 +20,14 @@ pip install -r requirements.txt
 kubectl -n ner port-forward svc/vllm-llama-3-1-8b-instruct 8080:80  # vLLM port-forward
 
 kubectl -n ner port-forward svc/ollama 11434:11434                  # Ollama port-forward
-# kubectl -n ner port-forward ollama-dd6845745-2txz8 11434:11434
 ```
 Edit `.env` to match
 
 ## Create RAG database
 
 ```bash
-python ./src/preproc_doc.py                                         # preprocess BDC website repo
-python -m src.prepare_chromadb                                      # create chroma db
+python -m utils.prepare_preproc_doc                 # preprocess BDC website repo
+python -m utils.prepare_chromadb                    # create chroma db
 ```
 
 ## Run chatbot
@@ -39,8 +38,8 @@ streamlit run app.py                                # run streamlit app
 
 ### Streamlit Frontend and LangServe/FastAPI Backend
 ```bash
-fastapi dev server.py           # run langserve backend
-streamlit run client.py        # run streamlit frontend
+fastapi dev server.py                               # run langserve backend
+streamlit run client.py                             # run streamlit frontend
 ```
 
 > [!WARNING]
