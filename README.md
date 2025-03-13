@@ -32,8 +32,15 @@ python -m src.prepare_chromadb                                      # create chr
 ```
 
 ## Run chatbot
+### Standalone Streamlit App
 ```bash
 streamlit run app.py                                # run streamlit app
+```
+
+### Streamlit Frontend and LangServe/FastAPI Backend
+```bash
+fastapi dev server.py           # run langserve backend
+streamlit run client.py        # run streamlit frontend
 ```
 
 > [!WARNING]
