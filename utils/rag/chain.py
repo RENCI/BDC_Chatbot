@@ -89,7 +89,18 @@ def merge_responses(x):
         raise ValueError(f"Invalid flag: {x['flag']}")
 
 
-
+def fix_data_type(x):
+    # Document to dict
+    # relevance_score to float
+    if "context" in x:
+        print("have context")
+        for i, doc in enumerate(x["context"]):
+            doc = doc.dict()
+            if "metadata" in doc and "relevance_score" in doc["metadata"]:
+                print("have relevance_score")
+                doc["metadata"]["relevance_score"] = doc["metadata"]["relevance_score"].item()
+            x["context"][i] = doc
+    return x
 
 
 def strip_thought(message: AIMessage):
@@ -117,7 +128,7 @@ class VectorStoreRetrieverWithScore(VectorStoreRetriever):
             *self.vectorstore.similarity_search_with_score(query, **self.search_kwargs)
         )
         for doc, score in zip(docs, scores):
-            doc.metadata["score"] = score
+            doc.metadata["score"] = float(score)
             doc.metadata["retriever_type"] = "similarity"
         return docs
 
@@ -178,7 +189,8 @@ class BM25RetrieverWithScore(BM25Retriever):
         query_emb = self.emb.embed_query(query)
         
         for i, doc in enumerate(return_docs):
-            doc.metadata["score"] = cosine_similarity([query_emb], [doc_emb[i]])[0][0]
+            doc.metadata["score"] = float(cosine_similarity([query_emb], [doc_emb[i]])[0][0])
+            
             doc.metadata["retriever_type"] = "bm25"
         
         
@@ -465,7 +477,9 @@ def create_main_chain(retriever, llm, guardian_llm, emb, vectorstore: VectorStor
                   | response_branch 
                   | create_bdc_response_regex_chain()
                 #   | create_bdc_response_llm_chain(llm)
-                  | RunnableLambda(merge_responses))
+                  | RunnableLambda(merge_responses)
+                  | RunnableLambda(fix_data_type))
+
     
     # main_chain.get_graph().print_ascii()
     

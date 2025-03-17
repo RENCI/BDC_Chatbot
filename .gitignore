@@ -172,3 +172,6 @@ llm_docs/
 
 .env*
 !.env_example
+
+# ignore .pkl
+*.pkl
