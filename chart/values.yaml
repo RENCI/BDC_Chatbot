@@ -38,8 +38,12 @@ securityContext: {}
 service:
   type: ClusterIP
   ports:
-    streamlit: 8501
-    api: 8000
+    - name: streamlit
+      port: 8501
+      targetPort: 8501
+    - name: uvicorn
+      port: 8000
+      targetPort: 8000
 
 ingress:
   enabled: true
