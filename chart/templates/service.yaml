@@ -7,9 +7,13 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: http
+    - port: 8501
+      targetPort: streamlit
       protocol: TCP
-      name: http
+      name: streamlit
+    - port: 8000
+      targetPort: api
+      protocol: TCP
+      name: api
   selector:
     {{- include "bdc-chatbot.selectorLabels" . | nindent 4 }}

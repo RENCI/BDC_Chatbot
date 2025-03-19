@@ -32,7 +32,7 @@ COPY . .
 # create RAG database
 RUN python ./utils/preproc_doc.py && python -m utils.prepare_chromadb
 
-EXPOSE 8501
+EXPOSE 8000 8501
 
 # Run streamlit when the container launches, also enable development features like auto-reload
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.enableCORS=false"]
+CMD ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port 8000 & streamlit run app.py --server.port=8501 --server.enableCORS=false --server.address=0.0.0.0 & wait"]

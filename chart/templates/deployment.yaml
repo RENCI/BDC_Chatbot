@@ -32,8 +32,11 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
+            - name: streamlit
+              containerPort: 8501
+              protocol: TCP
+            - name: api
+              containerPort: 8000
               protocol: TCP
           env:
             {{- if .Values.openaiApiKey }}
@@ -50,11 +53,11 @@ spec:
           livenessProbe:
             httpGet:
               path: /
-              port: http
+              port: streamlit
           readinessProbe:
             httpGet:
               path: /
-              port: http
+              port: streamlit
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
