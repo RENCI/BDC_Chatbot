@@ -39,3 +39,10 @@ fastapi dev server.py
 ## Client
 
 See [renci/bdc_chatbot-client-streamlit](https://github.com/RENCI/BDC_Chatbot-client-streamlit).
+
+## Build Docker Image
+```bash
+docker build --build-arg DB_PATH=$(grep DB_PATH .env | cut -d '=' -f2) \
+  --build-arg OPENAI_API_KEY=$(grep OPENAI_API_KEY .env | cut -d '=' -f2) \
+  -t containers.renci.org/comms/bdcbot-server:0.1.0 .
+```
