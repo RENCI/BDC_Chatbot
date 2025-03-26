@@ -30,23 +30,12 @@ python -m utils.prepare_preproc_doc                 # preprocess BDC website rep
 python -m utils.prepare_chromadb                    # create chroma db
 ```
 
-## Run chatbot
-### Standalone Streamlit App
+## Run chatbot server
+
 ```bash
-streamlit run app.py                                # run streamlit app
+fastapi dev server.py
 ```
 
-### Streamlit Frontend and LangServe/FastAPI Backend
-```bash
-fastapi dev server.py                               # run langserve backend
-streamlit run client.py                             # run streamlit frontend
-```
+## Client
 
-> [!WARNING]
->
-> - If you see `ValueError: Received disallowed comparator nin` when running the chatbot app, add `Comparator.IN, Comparator.NIN` to `langchain_community\query_constructors\chroma.py` under `allowed_comparators`
-
-> [!IMPORTANT]
->
-> - To use ${\color{orange}\text{vLLM}}$ API for chat completion, remove `parallel_tool_calls=False` from `langchain_openai\chat_models\base.py`
-> - Chroma DB initialization might quit without error or warning, might be caused by compatibility issue with Windows.
+See [renci/bdc_chatbot-client-streamlit](https://github.com/RENCI/BDC_Chatbot-client-streamlit).
