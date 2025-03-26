@@ -74,7 +74,11 @@ add_routes(app,
            default_rag_chain,
            path="/bdc-bot")
 
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+if __name__ == '__main__':
+    uvicorn.run(
+        app,
+        host='0.0.0.0',
+        port=8000,
+        log_level='debug',  # Enables detailed logging
+        access_log=True,  # Logs incoming requests
+    )
