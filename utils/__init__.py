@@ -4,10 +4,9 @@ from dotenv import load_dotenv
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 # from langchain_community.embeddings import OllamaEmbeddings
-
 from langchain_ollama import OllamaEmbeddings
-
 from langchain_ollama import ChatOllama
+from langserve import RemoteRunnable
 
 from .rag.chain import strip_thought
 
@@ -21,6 +20,7 @@ def set_emb_llm():
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
     GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL")
     GUARDIAN_URL = os.getenv("GUARDIAN_URL")
+    DUGBOT_RUNNABLE_URL = os.getenv("DUGBOT_RUNNABLE_URL")
     DB_PATH = os.getenv("DB_PATH")
 
 
@@ -48,7 +48,10 @@ def set_emb_llm():
     else:
         guardian_llm = llm # default to llm
     
+    if DUGBOT_RUNNABLE_URL:
+        dugbot_chain = RemoteRunnable(url=DUGBOT_RUNNABLE_URL)
+    else:
+        dugbot_chain = None
     
-    
-    return emb, llm | strip_thought, guardian_llm, DB_PATH
+    return emb, llm | strip_thought, guardian_llm, dugbot_chain, DB_PATH
 

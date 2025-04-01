@@ -4,7 +4,7 @@ from langserve import add_routes
 from fastapi.middleware.cors import CORSMiddleware
 
 from langchain.retrievers.document_compressors import FlashrankRerank
-from utils.rag.chain import create_main_chain, create_time_filter
+from utils.rag.chain import create_main_chain, create_time_filter, create_router_chain, create_query_classifier_chain
 from langchain_chroma import Chroma
 from utils import set_emb_llm
 from langchain.globals import set_debug, set_verbose
@@ -12,7 +12,7 @@ from langchain.globals import set_debug, set_verbose
 set_debug(True)
 
 def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
-    emb, llm, guardian_llm, DB_PATH = set_emb_llm()
+    emb, llm, guardian_llm, dugbot_chain, DB_PATH = set_emb_llm()
 
     vectorstore = Chroma(persist_directory=DB_PATH,embedding_function=emb)
 
@@ -33,14 +33,21 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
         compressor = None
     
     
-    return llm, guardian_llm, emb, vectorstore, default_retriever, retriever_top_k, compressor
+    return llm, guardian_llm, dugbot_chain, emb, vectorstore, default_retriever, retriever_top_k, compressor
 
-llm, guardian_llm, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20, 
+llm, guardian_llm, dugbot_chain, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20, 
                                                                                   rerank_top_k=10)
 
-default_rag_chain = create_main_chain(default_retriever, llm, guardian_llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
+bdcbot_chain = create_main_chain(default_retriever, llm, guardian_llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
 
+print("bdcbot_chain:", bdcbot_chain)
+print("dugbot_chain:", dugbot_chain)
 
+if dugbot_chain:
+    classifier_chain = create_query_classifier_chain(llm)
+    main_chain = create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm)
+else:
+    main_chain = bdcbot_chain    
 
 
 app = FastAPI(
@@ -71,7 +78,7 @@ async def redirect_root_to_docs():
 
 # Edit this to add the chain you want to add
 add_routes(app, 
-           default_rag_chain,
+           main_chain,
            path="/bdc-bot")
 
 if __name__ == "__main__":

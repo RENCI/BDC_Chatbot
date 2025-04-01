@@ -250,9 +250,11 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         response_container = st.empty()
         response_container.markdown("Thinking...")
 
+        print("chat_history: ", st.session_state['history'])
+        
         res = current_chain.invoke({"input": prompt, "chat_history": st.session_state['history']})
         
-        print("current_chain.invoke: \n", res)
+        # print("current_chain.invoke: \n", res)
 
         
         answer = res["answer"]
