@@ -42,7 +42,7 @@ fastapi dev server.py                               # run langserve backend
 streamlit run client.py                             # run streamlit frontend
 ```
 
-### Example Return
+### Response Schema
 ```json
 {
     "input": user query,
@@ -57,6 +57,7 @@ streamlit run client.py                             # run streamlit frontend
     "dugbot_response": dugbot answer (empty if not called)
 }
 ```
+
 
 > [!WARNING]
 >
