@@ -42,6 +42,22 @@ fastapi dev server.py                               # run langserve backend
 streamlit run client.py                             # run streamlit frontend
 ```
 
+### Example Return
+```json
+{
+    "input": user query,
+    "chat_history": chat history,
+    "context": retrieved docs,
+    "topic": query topic (for predefined response),
+    "response": predefined response,
+    "flag": predefined response flag,
+    "answer": chatbot answer,
+    "display_answer": chatbot answer with predefined response,
+    "bdcbot_response": bdcbot answer (empty if not called),
+    "dugbot_response": dugbot answer (empty if not called)
+}
+```
+
 > [!WARNING]
 >
 > - If you see `ValueError: Received disallowed comparator nin` when running the chatbot app, add `Comparator.IN, Comparator.NIN` to `langchain_community\query_constructors\chroma.py` under `allowed_comparators`
