@@ -42,7 +42,7 @@ from .chroma.utils import create_chroma_client
 
 from . import set_emb_llm
 
-emb, llm, guardian_llm, DB_PATH = set_emb_llm()
+emb, llm, guardian_llm, dugbot_chain, DB_PATH = set_emb_llm()
 
 
 shutil.rmtree(DB_PATH, ignore_errors=True) 
@@ -53,12 +53,16 @@ chroma_client = create_chroma_client(docs_path="data/",
                                      use_summary=True, 
                                      file_name_list = ['events.pkl', 
                                                        'latest_updates.pkl', 
-                                                       'fellows.pkl', 
-                                                       'pages.pkl'], 
+                                                    #    'fellows.pkl', 
+                                                       'pages.pkl', 
+                                                       'freshdesk.pkl',
+                                                       'docs.pkl'], 
                                      doc_type_list = ['event', 
                                                       'update', 
-                                                      'fellow', 
-                                                      'page'])
+                                                    #   'fellow', 
+                                                      'page',
+                                                      'faq',
+                                                      'docs'])
 
 
 

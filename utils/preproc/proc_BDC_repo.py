@@ -204,18 +204,18 @@ def get_all_mdx_paths(pages_dir, page_dir_paths, page_file_paths):
 
 
 
-def paths_to_urls(base_url, file_paths):
-    urls = []
-    for path in file_paths:
+# def paths_to_urls(base_url, file_paths):
+#     urls = []
+#     for path in file_paths:
         
-        clean_path = path.replace('.mdx', '')
+#         clean_path = path.replace('.mdx', '')
         
-        clean_path = re.sub(r'/index$', '', clean_path)
+#         clean_path = re.sub(r'/index$', '', clean_path)
         
-        full_url = f"{base_url.rstrip('/')}/{clean_path}"
-        urls.append(full_url)
+#         full_url = f"{base_url.rstrip('/')}/{clean_path}"
+#         urls.append(full_url)
     
-    return urls
+#     return urls
 
 
 

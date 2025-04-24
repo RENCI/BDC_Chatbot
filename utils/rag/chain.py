@@ -199,10 +199,16 @@ class BM25RetrieverWithScore(BM25Retriever):
 
 
 
-def get_summary(text: str, llm):
+
+def get_summary(text: str, llm, min_text=300):
     summary_prompt = ChatPromptTemplate.from_messages(
         [("system", "Write a concise summary of the following text in 1-3 sentences, return the summary ONLY, This is NOT a conversation. \\n\\n{text}")]
     )
+    if min_text is None:
+        min_text = 0
+    if len(text) < min_text:
+        return text
+    
     return (summary_prompt|llm).invoke({"text": text}).model_dump()['content']
 
 def create_topic_classifier_chain(topics: List[str], llm):
@@ -582,7 +588,7 @@ def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
         {bdc_response}
         
         
-        Your answer to the question should be based on the strict search results from the DUG Bot, and then inform the user about the more general information from the BDC Bot.
+        Your answer to the question should state the strict search results from the DUG Bot, and then state the more general information from the BDC Bot.
         """)
     ])
 
@@ -730,7 +736,47 @@ def create_time_filter(search_query: date_filter_params = None):
 
 
 
+def create_chunk_contextualizer_chain(llm, use_metadata_context=False):
+    
+    if use_metadata_context:
+        contextualize_prompt = ChatPromptTemplate.from_template(
+"""<metadata_context>
+{context}
+</metadata_context>
+Here is the chunk we want to situate with the metadata context
+<chunk>
+{chunk_content}
+</chunk>
 
+Please give a short succinct natural language context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else.
+""")
+    
+    else:
+        contextualize_prompt = ChatPromptTemplate.from_template(
+"""<document>
+{context}
+</document>
+Here is the chunk we want to situate within the whole document
+<chunk>
+{chunk_content}
+</chunk>
+
+Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else.
+""")
+
+    contextualize_prompt += """
+
+"""
+
+
+    # Chain components
+    chain = (
+        contextualize_prompt 
+        | llm 
+        | StrOutputParser()
+    )
+
+    return chain
 
 
 

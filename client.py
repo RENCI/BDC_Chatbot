@@ -103,6 +103,8 @@ def parse_text(answer, context) -> str:
                 source['title'] = doc["metadata"]['title']
             elif 'name' in doc["metadata"]:
                 source['title'] = doc["metadata"]['name']
+            elif 'file_name' in doc["metadata"]:
+                source['title'] = doc["metadata"]['file_name']
             elif 'page_url' in doc["metadata"]:
                 # only use the last part of the page_url
                 source['title'] = doc["metadata"]['page_url'].split('/')[-1]
@@ -128,6 +130,10 @@ def draw_sources(sources, showSources):
         # Join lines with a line break and render via markdown
         st.markdown("<br>".join(source_lines), unsafe_allow_html=True)
 
+def draw_additional_response(response, response_title, show_response):
+    with st.expander(response_title, expanded=show_response):
+        st.markdown(response)
+    
 current_chain = default_rag_chain
 
 #with st.sidebar:
@@ -158,6 +164,8 @@ if 'history' not in st.session_state:
 if 'displayed_history' not in st.session_state:
     st.session_state['displayed_history'] = []
 
+if 'metadatas' not in st.session_state:
+    st.session_state['metadatas'] = []
 
 greeting = """
 Hello! I am the NHLBI BioData Catalyst® Chatbot, also known as BDCBot.
@@ -238,11 +246,20 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
     
     for i in range(len(st.session_state['displayed_history'])):
         role, content, sources = st.session_state['displayed_history'][i]
+        bdc_response = ""
+        dug_response = ""
+        if i%2 == 1:
+            j = i//2
+            bdc_response = st.session_state['metadatas'][j].get("bdc_response", "")
+            dug_response = st.session_state['metadatas'][j].get("dug_response", "")
         with st.chat_message(role):
             st.markdown(content)
             if sources:
                 draw_sources(sources, False)
-    
+            if bdc_response and dug_response:
+                draw_additional_response(bdc_response, "BDC Response", False)
+                draw_additional_response(dug_response, "DUG Response", False)
+        
     with st.chat_message('using-bdc'):
         st.markdown(prompt)
 
@@ -267,20 +284,30 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         
         
         display_answer = res.get("display_answer", answer)
-        
+        bdc_response = res.get("bdc_response", "")
+        dug_response = res.get("dug_response", "")
         # print("flag: ", res["flag"])
         
         
         display_text += answer
 
         display_text, sources = parse_text(display_answer, context)
+        
+        if dug_response:
+            display_text += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/) for more information."
+        
         response_container.markdown(display_text, unsafe_allow_html=True)
 
         draw_sources(sources, False)
+
+        if bdc_response and dug_response:
+            draw_additional_response(bdc_response, "BDC Response", True)
+            draw_additional_response(dug_response, "DUG Response", True)
     
     st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['displayed_history'].append(('using-bdc', prompt, None))
     st.session_state['displayed_history'].append(('bdc-assistant', display_text, sources))
+    st.session_state['metadatas'].append(res)
 
 st.markdown(
     """
