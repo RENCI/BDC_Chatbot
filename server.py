@@ -4,10 +4,15 @@ from langserve import add_routes
 from fastapi.middleware.cors import CORSMiddleware
 
 from langchain.retrievers.document_compressors import FlashrankRerank
-from utils.rag.chain import create_main_chain, create_time_filter, create_router_chain, create_query_classifier_chain
+from utils.rag.chain import create_main_chain, create_time_filter, create_router_chain, create_query_classifier_chain, create_input_guardrail_chain
 from langchain_chroma import Chroma
 from utils import set_emb_llm
 from langchain.globals import set_debug, set_verbose
+
+from nemoguardrails import RailsConfig
+from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
+
+from langchain.schema.runnable import RunnableBranch, RunnablePassthrough
 
 set_debug(True)
 
@@ -49,7 +54,28 @@ if dugbot_chain:
 else:
     main_chain = bdcbot_chain    
 
+# region: add guardrails
+guardrails_config = RailsConfig.from_path("config")
+guardrails = RunnableRails(guardrails_config, 
+                            llm=guardian_llm,
+                            verbose=True, 
+                            output_key="answer")
 
+input_guardrail_chain = create_input_guardrail_chain(llm)
+
+
+
+
+
+main_chain_branch = RunnableBranch(
+    (lambda x: not x["blocked"], main_chain),
+    # return guardrail result
+    lambda x: x
+) 
+
+chatbot_chain = input_guardrail_chain | main_chain_branch
+
+# endregion
 app = FastAPI(
     title="BDC Bot",
     version="1.0",
@@ -78,8 +104,9 @@ async def redirect_root_to_docs():
 
 # Edit this to add the chain you want to add
 add_routes(app, 
-           main_chain,
-           path="/bdc-bot")
+        #   chatbot_chain,
+          guardrails | main_chain,
+          path="/bdc-bot")
 
 if __name__ == "__main__":
     import uvicorn
