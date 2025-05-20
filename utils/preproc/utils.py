@@ -75,7 +75,7 @@ def split_by_sections(text, return_dict = False):
         
 
 
-def contextualize_chunk(llm, chunk_content: str, whole_document: str = None, metadata_context: str = None) -> str:
+def contextualize_chunk(llm, chunk_content: str, whole_document: str = None, metadata_context: str = None, is_markdown: bool = False, return_context_only: bool = False) -> str:
     
     if metadata_context is not None:
         context = metadata_context
@@ -91,7 +91,13 @@ def contextualize_chunk(llm, chunk_content: str, whole_document: str = None, met
         "chunk_content": chunk_content
     })
     
+    if return_context_only:
+        return context
+    
     # Combine the context with the original chunk
-    contextualized_chunk = f"{context}{chunk_content}"
+    if is_markdown:
+        contextualized_chunk = f"{context}\n\n{chunk_content}"
+    else:
+        contextualized_chunk = f"{context}{chunk_content}"
     
     return contextualized_chunk

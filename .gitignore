@@ -175,3 +175,6 @@ llm_docs/
 
 # ignore .pkl
 *.pkl
+
+# ignore data folder
+data/

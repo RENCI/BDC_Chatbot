@@ -43,7 +43,7 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
 llm, guardian_llm, dugbot_chain, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20, 
                                                                                   rerank_top_k=10)
 
-bdcbot_chain = create_main_chain(default_retriever, llm, guardian_llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
+bdcbot_chain = create_main_chain(default_retriever, llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
 
 print("bdcbot_chain:", bdcbot_chain)
 print("dugbot_chain:", dugbot_chain)

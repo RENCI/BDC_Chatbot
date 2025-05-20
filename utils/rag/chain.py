@@ -29,12 +29,6 @@ from datetime import datetime, timedelta, date
 
 
 
-from nemoguardrails import RailsConfig
-from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
-
-
-
-
 
 
 from langchain_core.output_parsers import StrOutputParser
@@ -512,16 +506,7 @@ def create_query_classifier_chain(llm):
 
 
 
-def create_main_chain(retriever, llm, guardian_llm, emb, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False):
-    config = RailsConfig.from_path("config")
-    
-    
-    # region: init guardrails
-    # guardrails = RunnableRails(config, 
-    #                            llm=guardian_llm,
-    #                            verbose=True, 
-    #                            output_key="answer")
-    # endregion: init guardrails    
+def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False):
     
     
     
@@ -596,11 +581,17 @@ def create_main_chain(retriever, llm, guardian_llm, emb, vectorstore: VectorStor
 # bdcbot_response or dugbot_response will not be empty if they are called
 def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
     
+    dugbot_query_rephrase_chain = ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful assistant that rephrases user queries. Your task is to optimize the query for a generic search engine. If the query is asking for the availability of a dataset, remove the search engine specific keywords. Return the optimized query only, without any other text."),
+        ("user", "{question}"),
+    ]) | llm | StrOutputParser()
+    
     # region: parallel bdc dug chains
     def prepare_dug_input(x):
         """Prepares input format for dugbot chain"""
         return {
-            "input": x["input"], 
+            "input": dugbot_query_rephrase_chain.invoke(x["input"]), 
+            # "input": x["input"], 
             "next": "start", 
             "chat_history": x["chat_history"], 
             "extra": {}

@@ -43,7 +43,7 @@ def set_emb_llm():
         print("model: ", EMBEDDING_MODEL)
 
     if GUARDIAN_MODEL and GUARDIAN_URL:
-        guardian_llm = ChatOllama(base_url=GUARDIAN_URL, model=GUARDIAN_MODEL)
+        guardian_llm = ChatOllama(base_url=GUARDIAN_URL, model=GUARDIAN_MODEL, temperature=0)
         print("model: ", GUARDIAN_MODEL, "base_url: ", GUARDIAN_URL)
     else:
         guardian_llm = llm # default to llm
