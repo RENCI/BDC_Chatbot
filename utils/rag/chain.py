@@ -73,12 +73,14 @@ def merge_responses(x):
     if x["flag"] == 'a':
         # x["display_answer"] = f"{x['answer']}\n\n<disclaimer>{x['response']}</disclaimer>"
         x["display_answer"] = f"{x['answer']}\n\n{x['response']}"
+        x["predefined_response"] = x["response"]
         return x
     # replace, display replaced text
     elif x["flag"] == 'r':
         x["answer"] = f"Answer was replaced with predefined response: \n{x['response']}"
         # x["display_answer"] = f"<replaced>{x['response']}</replaced>"
         x["display_answer"] = f"{x['response']}"
+        x["predefined_response"] = x["response"]
         return x
     # default, display answer
     elif x["flag"] == 'd':
