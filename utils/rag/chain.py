@@ -68,6 +68,14 @@ def load_yaml(yaml_path: str):
         except yaml.YAMLError as exc:
             print(exc)
 
+
+def proc_response_pydantic_enum(x):
+    # rm non-letter characters, keep underscore and dash
+    x = re.sub(r'[^a-zA-Z_-]', '', x)
+    x = x.lower()
+    return x
+
+
 def merge_responses(x):
     # append, display with added disclaimer
     if x["flag"] == 'a':
@@ -91,7 +99,7 @@ def merge_responses(x):
         raise ValueError(f"Invalid flag: {x['flag']}")
 
 
-def fix_data_type(x):
+def document_to_dict(x):
     # Document to dict
     # relevance_score to float
     if "context" in x:
@@ -278,6 +286,7 @@ def create_topic_classifier_chain(topics: List[str], llm):
         classifier_prompt 
         | llm 
         | StrOutputParser() 
+        | RunnableLambda(proc_response_pydantic_enum)
         | (lambda x: {"topic": x}) 
         | (lambda x: ModelWithTopics(**x).topic) # return string
     )
@@ -493,10 +502,14 @@ def create_query_classifier_chain(llm):
         ("human", "{input}")
     ])
     
+
+    
+    
     return (
        classifier_prompt 
         | llm 
         | StrOutputParser() 
+        | RunnableLambda(proc_response_pydantic_enum)
         | (lambda x: QueryType(category=x).category)
     )
 
@@ -570,7 +583,7 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
                   | create_bdc_response_regex_chain()
                 #   | create_bdc_response_llm_chain(llm)
                   | RunnableLambda(merge_responses)
-                  | RunnableLambda(fix_data_type))
+                  | RunnableLambda(document_to_dict))
 
     
     # main_chain.get_graph().print_ascii()
