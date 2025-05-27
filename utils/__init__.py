@@ -53,5 +53,6 @@ def set_emb_llm():
     else:
         dugbot_chain = None
     
-    return emb, llm | strip_thought, guardian_llm, dugbot_chain, DB_PATH
+    # return emb, llm | strip_thought, guardian_llm, dugbot_chain, DB_PATH
+    return emb, llm, guardian_llm, dugbot_chain, DB_PATH
 

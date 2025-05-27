@@ -304,7 +304,8 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
             draw_additional_response(bdc_response, "BDC Response", True)
             draw_additional_response(dug_response, "DUG Response", True)
     
-    st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
+    # st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
+    st.session_state['history'].extend([(HumanMessage(content=prompt)), (AIMessage(content=answer))])
     st.session_state['displayed_history'].append(('using-bdc', prompt, None))
     st.session_state['displayed_history'].append(('bdc-assistant', display_text, sources))
     st.session_state['metadatas'].append(res)

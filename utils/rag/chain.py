@@ -68,6 +68,14 @@ def load_yaml(yaml_path: str):
         except yaml.YAMLError as exc:
             print(exc)
 
+
+def proc_response_pydantic_enum(x):
+    # rm non-letter characters, keep underscore and dash
+    x = re.sub(r'[^a-zA-Z_-]', '', x)
+    x = x.lower()
+    return x
+
+
 def merge_responses(x):
     # append, display with added disclaimer
     if x["flag"] == 'a':
@@ -91,7 +99,7 @@ def merge_responses(x):
         raise ValueError(f"Invalid flag: {x['flag']}")
 
 
-def fix_data_type(x):
+def document_to_dict(x):
     # Document to dict
     # relevance_score to float
     if "context" in x:
@@ -278,6 +286,7 @@ def create_topic_classifier_chain(topics: List[str], llm):
         classifier_prompt 
         | llm 
         | StrOutputParser() 
+        | RunnableLambda(proc_response_pydantic_enum)
         | (lambda x: {"topic": x}) 
         | (lambda x: ModelWithTopics(**x).topic) # return string
     )
@@ -361,9 +370,7 @@ Do NOT answer the question, just reformulate it if needed and otherwise return i
             ("human", "{input}"),
         ]
     )
-    # history_aware_retriever = create_history_aware_retriever(
-    #     ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0125"), retriever, contextualize_q_prompt
-    # )
+    
     history_aware_retriever = create_history_aware_retriever(
         llm, retriever, contextualize_q_prompt
     )
@@ -488,15 +495,21 @@ def create_query_classifier_chain(llm):
         - "Is cancer data available in BDC?" -> "both"
         - "What's the weather like?" -> "na"
         
+        Note:
+        Do not return "dug", if the user query contains not biomedical terms. 
         MUST return ONLY one of these four values: "bdc", "dug", "both", or "na"
         Return the category name only, no other text or explanation."""),
         ("human", "{input}")
     ])
     
+
+    
+    
     return (
        classifier_prompt 
         | llm 
         | StrOutputParser() 
+        | RunnableLambda(proc_response_pydantic_enum)
         | (lambda x: QueryType(category=x).category)
     )
 
@@ -570,7 +583,7 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
                   | create_bdc_response_regex_chain()
                 #   | create_bdc_response_llm_chain(llm)
                   | RunnableLambda(merge_responses)
-                  | RunnableLambda(fix_data_type))
+                  | RunnableLambda(document_to_dict))
 
     
     # main_chain.get_graph().print_ascii()
@@ -588,16 +601,36 @@ def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
         ("user", "{question}"),
     ]) | llm | StrOutputParser()
     
+    
+    
+    
+    
     # region: parallel bdc dug chains
+    
+    def prepare_dug_history(chat_history):
+        dug_history = []
+        for i in range(len(chat_history)//2):
+            dug_history.append([chat_history[i*2]["content"], chat_history[i*2+1]["content"]])
+        return dug_history
+    
+    
     def prepare_dug_input(x):
         """Prepares input format for dugbot chain"""
-        return {
+        
+        # print("dug_chat_history: ", prepare_dug_history(x["chat_history"]))
+        
+        dug_payload = {
             "input": dugbot_query_rephrase_chain.invoke(x["input"]), 
             # "input": x["input"], 
             "next": "start", 
-            "chat_history": x["chat_history"], 
+            "chat_history": prepare_dug_history(x["chat_history"]), 
             "extra": {}
+
         }
+
+        print("dug_payload: ", dug_payload)
+        
+        return dug_payload
 
     parallel_chains = RunnableParallel({
         "bdc_response": bdcbot_chain,
