@@ -288,21 +288,25 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         dug_response = res.get("dug_response", "")
         # print("flag: ", res["flag"])
         
+        if answer is None:       
+            answer = "<predefined response>"
+            display_text = answer
+            sources = []
+            response_container.markdown(display_text)
+            draw_sources(sources, False)
+        else:
+            display_text, sources = parse_text(display_answer, context)
         
-        display_text += answer
+            if dug_response:
+                display_text += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/) for more information."
+            
+            response_container.markdown(display_text, unsafe_allow_html=True)
 
-        display_text, sources = parse_text(display_answer, context)
-        
-        if dug_response:
-            display_text += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/) for more information."
-        
-        response_container.markdown(display_text, unsafe_allow_html=True)
+            draw_sources(sources, False)
 
-        draw_sources(sources, False)
-
-        if bdc_response and dug_response:
-            draw_additional_response(bdc_response, "BDC Response", True)
-            draw_additional_response(dug_response, "DUG Response", True)
+            if bdc_response and dug_response:
+                draw_additional_response(bdc_response, "BDC Response", False)
+                draw_additional_response(dug_response, "DUG Response", False)
     
     # st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['history'].extend([(HumanMessage(content=prompt)), (AIMessage(content=answer))])
