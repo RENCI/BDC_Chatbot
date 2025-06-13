@@ -200,7 +200,7 @@ def create_input_guardrail_chain(llm):
     """Creates a chain that checks if user input complies with BDC policies using guardrails."""
     
     input_check_prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are an input validation assistant for BioData Catalyst (BDC).
+        ("assistant", """You are an input validation assistant for BioData Catalyst (BDC).
         Your task is to check if user messages comply with BDC's policies.
         You must return ONLY 'Yes' if the message should be blocked, or 'No' if it's acceptable.
         No other response format is allowed."""),
@@ -252,7 +252,7 @@ def create_input_guardrail_chain(llm):
 
 def get_summary(text: str, llm, min_text=300):
     summary_prompt = ChatPromptTemplate.from_messages(
-        [("system", "Write a concise summary of the following text in 1-3 sentences, return the summary ONLY, This is NOT a conversation. \\n\\n{text}")]
+        [("assistant", "Write a concise summary of the following text in 1-3 sentences, return the summary ONLY, This is NOT a conversation. \\n\\n{text}")]
     )
     if min_text is None:
         min_text = 0
@@ -274,7 +274,7 @@ def create_topic_classifier_chain(topics: List[str], llm):
     topic_list = ", ".join([f'"{topic}"' for topic in topics])
     
     classifier_prompt = ChatPromptTemplate.from_messages([
-        ("system", f"""You are a topic classifier. Given a user query, determine if it's related to any of the following topics: {topic_list}.
+        ("assistant", f"""You are a topic classifier. Given a user query, determine if it's related to any of the following topics: {topic_list}.
         If the query clearly relates to one of these topics, return ONLY that topic name from the list.
         If it doesn't clearly match any topic, return ONLY "other".
         Return ONLY the topic name from the list or "other" with no additional text or explanation.
@@ -365,7 +365,7 @@ which can be understood without the chat history. Replace "NHLBI BioData Catalys
 Do NOT answer the question, just reformulate it if needed and otherwise return it as is."""
     contextualize_q_prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", contextualize_q_system_prompt),
+            ("assistant", contextualize_q_system_prompt),
             MessagesPlaceholder("chat_history"),
             ("human", "{input}"),
         ]
@@ -391,7 +391,7 @@ DO NOT USE "NHLBI BioData Catalyst®️" or any short form of it. You MUST ONLY 
     
     qa_prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", qa_system_prompt),
+            ("assistant", qa_system_prompt),
             MessagesPlaceholder("chat_history"),
             ("human", "{input}"),
         ]
@@ -446,7 +446,7 @@ def create_bdc_response_regex_chain():
 
 def create_bdc_response_llm_chain(llm):
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """Rewrite the following text, replacing all instances of "NHLBI BioData Catalyst®️", "BioData Catalyst", and any short form of it with the abbreviation "BDC". If a paratheses surrounded "(BDC)" after the replacement, remove it. If there is clear indication that the text is only explaining what the abbreviation stands for, keep it as is.
+        ("assistant", """Rewrite the following text, replacing all instances of "NHLBI BioData Catalyst®️", "BioData Catalyst", and any short form of it with the abbreviation "BDC". If a paratheses surrounded "(BDC)" after the replacement, remove it. If there is clear indication that the text is only explaining what the abbreviation stands for, keep it as is.
         Keep all other content exactly the same, including formatting, punctuation, and line breaks.
         Return ONLY the rewritten text without any additional explanation or commentary."""),
         ("human", "{text}")
@@ -482,7 +482,7 @@ def create_query_classifier_chain(llm):
     """Creates a chain that classifies user queries into BDC platform or biomedical data categories."""
     
     classifier_prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a query classifier for the BioData Catalyst (BDC) platform. 
+        ("assistant", """You are a query classifier for the BioData Catalyst (BDC) platform. 
         Given a user query, determine if it's about:
         1. General knowledge about the BDC (return "bdc")
         2. Biomedical data or studies (return "dug")
@@ -597,7 +597,7 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
 def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
     
     dugbot_query_rephrase_chain = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant that rephrases user queries. Your task is to optimize the query for a generic search engine. If the query is asking for the availability of a dataset, remove the search engine specific keywords. Return the optimized query only, without any other text."),
+        ("assistant", "You are a helpful assistant that rephrases user queries. Your task is to optimize the query for a generic search engine. If the query is asking for the availability of a dataset, remove the search engine specific keywords. Return the optimized query only, without any other text."),
         ("user", "{question}"),
     ]) | llm | StrOutputParser()
     
@@ -647,7 +647,7 @@ def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
     
     # region: combine responses
     rephrase_prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a helpful assistant work for BDC (Biomedical Data catalyst) that combines and rephrases information from multiple sources 
+        ("assistant", """You are a helpful assistant work for BDC (Biomedical Data catalyst) that combines and rephrases information from multiple sources 
         into a single, coherent response. Maintain all factual information while making the response flow naturally.
         Focus on answering the user's original question clearly and concisely."""),
         ("human", """Please combine and rephrase the following information into a single, coherent response. Include any mentioned datasets and studies as bullet points, if they are relevant to the question. 

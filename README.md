@@ -14,19 +14,24 @@ Copy `.env_example` to `.env` and make any necessary changes
 pip install -r requirements.txt
 ```
 
+## Edit `.env`
+
+Use `.env_example` as a template to edit `.env` 
+
+Supported LLM providers: `openai`, `google`, `vllm`, `ollama`
+
 ## Port forwarding for local development using vLLM and Ollama at RENCI
 
 ```bash
-kubectl -n ner port-forward svc/vllm-llama-3-1-8b-instruct 8080:80  # vLLM port-forward
+kubectl -n ner port-forward svc/vllm-server 8080:80 # vLLM port-forward
 
-kubectl -n ner port-forward svc/ollama 11434:11434                  # Ollama port-forward
+kubectl -n ner port-forward svc/ollama 11434:11434  # Ollama port-forward
 ```
-Edit `.env` to match
 
 ## Create RAG database
 
 ```bash
-python -m utils.preproc_doc                 # preprocess BDC website repo
+python -m utils.preproc_doc                         # preprocess BDC website repo
 python -m utils.prepare_chromadb                    # create chroma db
 ```
 
