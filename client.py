@@ -8,6 +8,7 @@ from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
 from langserve import RemoteRunnable
+from streamlit_d3graph import d3graph
 import math
 
 set_verbose(True)
@@ -43,6 +44,9 @@ doc_type_dict['page'] = "BDC Web Page"
 doc_type_dict['fellow'] = "BDC Fellow"
 doc_type_dict['update'] = "BDC Update"
 doc_type_dict['event'] = "BDC Event"
+
+# Initialize D3 graph
+d3 = d3graph(support=None)
 
 def filter_sources(docs):
     # Split by the maximum distance between scores
@@ -130,10 +134,68 @@ def draw_sources(sources, showSources):
         # Join lines with a line break and render via markdown
         st.markdown("<br>".join(source_lines), unsafe_allow_html=True)
 
-def draw_additional_response(response, response_title, show_response):
+def string_to_color(s):
+    # Simple hash to color hex (for demonstration)
+    import hashlib
+    if not s:
+        s = "default"
+    return '#' + hashlib.md5(s.encode()).hexdigest()[:6]
+
+def process_kg(kg):
+    # Check if kg has no nodes or edges before displaying
+    if not kg or 'nodes' not in kg or 'edges' not in kg:
+        return None, None
+
+    # Build node and edge lists
+    nodes = kg.get('nodes', [])
+    edges = kg.get('edges', [])
+
+    if not nodes or not edges:
+        return None, None
+
+    # Build node dataframe for d3graph
+    import pandas as pd
+    node_ids = []
+    node_labels = []
+    node_categories = []
+    node_colors = []
+    for node in nodes:
+        node_id = node.get('id')
+        node_ids.append(node_id)
+        node_labels.append(node.get('name', node_id))
+        category = (node.get('category', ["biolink:NamedThing"])[0] if node.get('category') else "biolink:NamedThing")
+        node_categories.append(category.replace("biolink:", ""))
+        node_colors.append(string_to_color(category))
+    df = pd.DataFrame({
+        'label': node_labels,
+        'category': node_categories,
+        'color': node_colors
+    }, index=node_ids)
+
+    # Build adjacency matrix for d3graph
+    adjmat = pd.DataFrame(0, index=node_ids, columns=node_ids)
+    for edge in edges:
+        source = edge.get('subject')
+        target = edge.get('object')
+        if source in node_ids and target in node_ids:
+            adjmat.at[source, target] = 1
+
+    return adjmat, df
+
+def draw_additional_response(response, response_title, show_response, kg=None):
     with st.expander(response_title, expanded=show_response):
         st.markdown(response)
-    
+
+        if kg is not None:
+            adjmat, df = process_kg(kg.get('knowledge_graph'))
+
+            if adjmat is None or df is None:
+                return
+            
+            d3.graph(adjmat)
+            d3.set_node_properties(color=df['label'].values)
+            d3.show(show_slider=False, save_button=False)
+                
 current_chain = default_rag_chain
 
 #with st.sidebar:
@@ -172,9 +234,9 @@ Hello! I am the NHLBI BioData Catalyst® Chatbot, also known as BDCBot.
 I am AI powered, and here to support you on your blood, heart, lung
 or sleep research journey.
 
-I have been trained on public websites, but also specifically on approved
+I have been trained on public websites, but specifically developed to answer questions based on approved
 BDC documentation. My answers will be as accurate and as current as the
-documentation I am trained upon. If you want to double check my answers I
+documentation I have available. If you want to double check my answers I
 would encourage you to check the sources outlined in my responses and/or
 contact the [BDC HelpDesk](https://biodatacatalyst.nhlbi.nih.gov/help-and-support/contact-us/). 
 BDC’s support team isn’t just AI powered; we have humans to help you one on one in live video chat by appointment too!
@@ -258,7 +320,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
                 draw_sources(sources, False)
             if bdc_response and dug_response:
                 #draw_additional_response(bdc_response, "BDC Response", False)
-                draw_additional_response(dug_response, "DUG Response", False)
+                draw_additional_response(dug_response, "DUG Response", False, True)
         
     with st.chat_message('using-bdc'):
         st.markdown(prompt)
@@ -291,8 +353,8 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         display_answer = res.get("display_answer", answer)
         bdc_response = res.get("bdc_response", "")
         dug_response = res.get("dug_response", "")
+        dug_kg = res.get("dug_kg")
         # print("flag: ", res["flag"])
-        
         
         display_text += answer
 
@@ -307,7 +369,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
 
         if bdc_response and dug_response:
             #draw_additional_response(bdc_response, "BDC Response", False)
-            draw_additional_response(dug_response, "DUG Response", False)
+            draw_additional_response(dug_response, "DUG Response", False, dug_kg)
     
     # st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['history'].extend([(HumanMessage(content=prompt)), (AIMessage(content=answer))])
