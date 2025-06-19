@@ -641,7 +641,7 @@ def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
             **x["bdc_response"],
             "bdc_response": x["bdc_response"]["answer"],
             "dug_response": x["dug_response"]["output"].content,
-            "dug_kg": x["dug_response"]["extra"].get("kg_extra")
+            "dug_kg": x["dug_response"]["extra"]
         }
     )
     # endregion

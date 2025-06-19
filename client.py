@@ -163,7 +163,7 @@ def process_kg(kg):
         node_id = node.get('id')
         node_ids.append(node_id)
         node_labels.append(node.get('name', node_id))
-        category = (node.get('category', ["biolink:NamedThing"])[0] if node.get('category') else "biolink:NamedThing")
+        category = node.get('category', ["biolink:NamedThing"])[0]
         node_categories.append(category.replace("biolink:", ""))
         node_colors.append(string_to_color(category))
     df = pd.DataFrame({
