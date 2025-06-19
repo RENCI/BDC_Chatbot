@@ -320,7 +320,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
                 draw_sources(sources, False)
             if bdc_response and dug_response:
                 #draw_additional_response(bdc_response, "BDC Response", False)
-                draw_additional_response(dug_response, "DUG Response", False, True)
+                draw_additional_response(dug_response, "DUG Response", False)
         
     with st.chat_message('using-bdc'):
         st.markdown(prompt)
