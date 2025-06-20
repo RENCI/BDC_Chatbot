@@ -71,7 +71,7 @@ def load_yaml(yaml_path: str):
 
 def proc_response_pydantic_enum(x):
     # rm non-letter characters, keep underscore and dash
-    x = re.sub(r'[^a-zA-Z_-]', '', x)
+    x = re.sub(r'[^a-zA-Z0-9_-]', '', x)
     x = x.lower()
     return x
 
@@ -263,6 +263,9 @@ def get_summary(text: str, llm, min_text=300):
 
 def create_topic_classifier_chain(topics: List[str], llm):
     """Creates a chain that classifies user queries into predefined topics."""
+    # topics to lowercase
+    
+    
     
     # Create a custom model class with the allowed topics
     ModelWithTopics = type(
@@ -287,8 +290,8 @@ def create_topic_classifier_chain(topics: List[str], llm):
         | llm 
         | StrOutputParser() 
         | RunnableLambda(proc_response_pydantic_enum)
-        | (lambda x: {"topic": x}) 
-        | (lambda x: ModelWithTopics(**x).topic) # return string
+        # | (lambda x: {"topic": x}) 
+        | (lambda x: ModelWithTopics(topic=x).topic) # return string
     )
 
 class TopicClassification(BaseModel):
@@ -298,6 +301,8 @@ class TopicClassification(BaseModel):
     @model_validator(mode='after')
     def validate_topic(self):
         """Ensure topic is either in allowed_topics or 'other'"""
+        self.topic = self.topic.lower()
+        
         if not hasattr(self, 'allowed_topics'):
             return self
         if self.topic != "other" and self.topic not in self.allowed_topics:
@@ -385,7 +390,7 @@ You can use bullet points and markdown formatting if either is needed.\
 The context are retrieved based on the user query and the chat history.\
 If there is context provided, answer the question based on the context.\
 Use the term 'documentation' instead of context in your repsponses.\
-DO NOT USE "NHLBI BioData Catalyst®️" or any short form of it. You MUST ONLY refer it as ```BDC``` in your responses, even if the user query is not refering it as BDC.\
+DO NOT USE "NHLBI BioData Catalyst®️" or any short form of it. You MUST ONLY refer it as "BDC" in your responses, even if the user query is not refering it as BDC.\
 
 ### context: {context}"""
     
@@ -496,7 +501,8 @@ def create_query_classifier_chain(llm):
         - "What's the weather like?" -> "na"
         
         Note:
-        Do not return "dug", if the user query contains not biomedical terms. 
+        Do NOT return "dug" or "both", if the user query does NOT contain biomedical terms 
+        If the user query is asking for general policy and function of BDC, only return "bdc". 
         MUST return ONLY one of these four values: "bdc", "dug", "both", or "na"
         Return the category name only, no other text or explanation."""),
         ("human", "{input}")
@@ -563,6 +569,10 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
     
     predefined_responses = load_yaml('./data/predefined_responses.yaml')
 
+    # lowercase topics
+    predefined_responses = {k.lower(): v for k, v in predefined_responses.items()}
+    
+    
     predefined_response_chain = create_predefined_response_chain(predefined_responses, llm)
     
     
@@ -647,14 +657,16 @@ def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
     
     # region: combine responses
     rephrase_prompt = ChatPromptTemplate.from_messages([
-        ("assistant", """You are a helpful assistant work for BDC (Biomedical Data catalyst) that combines and rephrases information from multiple sources 
-        into a single, coherent response. Maintain all factual information while making the response flow naturally.
-        Focus on answering the user's original question clearly and concisely."""),
+        ("assistant", """You are a helpful assistant work for BDC (BioData catalyst) that combines and rephrases information from multiple sources 
+        into a single, coherent response. Maintain all the important information while making the response flow naturally.
+        You must answer the user's original question clearly and concisely. Make sure the response has a natural flow and is not too long.
+        Never use the word "BioData Catalyst" in your response. Use "BDC" instead.
+        """),
         ("human", """Please combine and rephrase the following information into a single, coherent response. Include any mentioned datasets and studies as bullet points, if they are relevant to the question. 
         that answers this question: {input}
 
 
-        Information from DUG Bot (strict search results for datasets and studies):
+        Information from DUG Bot (search results for datasets and studies):
         {dug_response}
         Information from BDC Bot (general information from BDC website):
         {bdc_response}
@@ -713,7 +725,7 @@ def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
     # Create the routing chain
     router_chain = (
         RunnableLambda(lambda x: {"input": x["input"], "category": classifier_chain.invoke(x), "chat_history": x["chat_history"]})
-        | RunnableBranch(*branches) 
+        | (RunnableBranch(*branches).with_fallbacks([bdcbot_chain]))
     )
 
     # endregion

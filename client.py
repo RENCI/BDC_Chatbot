@@ -277,8 +277,17 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         answer = res["answer"]
         
         
-        if not answer:
-            answer = "I'm sorry, I can't answer that question."
+        
+        if res.get("flag", None) == 'r':
+            answer = res.get("predefined_response", "predefined_response (not found)")
+        elif res.get("bdc_response", None) and res.get("dug_response", None):
+            answer = res.get("response", "")
+        elif res.get("bdc_response", None):
+            answer = res["bdc_response"]
+        elif res.get("dug_response", None):
+            answer = res["dug_response"] 
+        
+
         
         
         context = res.get("context", [])
@@ -287,19 +296,25 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
             context[i] = doc.dict()
         
         
+        print("bot answer: ", answer)
         
-        display_answer = res.get("display_answer", answer)
+        display_answer = answer
+        if res.get("flag", None) == 'a':
+            display_answer += res.get("predefined_response", "predefined_response (not found)")
+        if res.get("dug_response", None):
+            display_answer += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) for more information."
+        
+        
         bdc_response = res.get("bdc_response", "")
         dug_response = res.get("dug_response", "")
         # print("flag: ", res["flag"])
         
         
-        display_text += answer
+        # display_text += answer
 
         display_text, sources = parse_text(display_answer, context)
         
-        if dug_response:
-            display_text += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) for more information."
+
         
         response_container.markdown(display_text, unsafe_allow_html=True)
 
