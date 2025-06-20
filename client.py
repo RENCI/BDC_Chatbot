@@ -129,7 +129,7 @@ def draw_sources(sources, showSources):
         source_lines = []
         for source in sources:
             # Create a formatted line for each source
-            line = f"[{source['doc_type']}] <a href='{source['url']}' target='_blank'>{source['url']}</a>"
+            line = f"[{source['doc_type']}] <a href='{source['url']}' target='_blank'>{source['title']}</a>"
             source_lines.append(line)
         # Join lines with a line break and render via markdown
         st.markdown("<br>".join(source_lines), unsafe_allow_html=True)
