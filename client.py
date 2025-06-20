@@ -44,6 +44,7 @@ doc_type_dict['page'] = "BDC Web Page"
 doc_type_dict['fellow'] = "BDC Fellow"
 doc_type_dict['update'] = "BDC Update"
 doc_type_dict['event'] = "BDC Event"
+doc_type_dict['faq'] = "BDC FAQ"
 
 # Initialize D3 graph
 d3 = d3graph(support=None)
@@ -122,17 +123,38 @@ def parse_text(answer, context) -> str:
 def source_link(url, title, type):
     return st.text(f"[{type}] {title}")
 
+doc_type_order = [
+    "faq",
+    "page",
+    "update",
+    "fellow",
+    "event"
+]
+
 def draw_sources(sources, showSources):
     if not sources:
         return
     with st.expander(f"Source{'s' if len(sources) > 1 else ''}", expanded=showSources):
-        source_lines = []
+        # Group sources by doc_type using source_order
+        grouped_sources = {doc_type: [] for doc_type in doc_type_order}
         for source in sources:
-            # Create a formatted line for each source
-            line = f"[{source['doc_type']}] <a href='{source['url']}' target='_blank'>{source['title']}</a>"
-            source_lines.append(line)
-        # Join lines with a line break and render via markdown
-        st.markdown("<br>".join(source_lines), unsafe_allow_html=True)
+            doc_type = source.get('doc_type')
+            if doc_type in grouped_sources:
+                grouped_sources[doc_type].append(source)
+            else:
+                print(f"Unknown doc_type: {doc_type} for source {source['title']}")
+
+        # Display sources by group in order
+        for doc_type in doc_type_order:
+            group = grouped_sources[doc_type]
+            if group:
+                header = f"**{doc_type_dict.get(doc_type, doc_type)}**"
+                source_lines = [header]
+                for source in group:
+                    line = f"<a href='{source['url']}' target='_blank'>{source['title']}</a>"
+                    source_lines.append(line)
+                # Join lines with a line break and render via markdown
+                st.markdown("<br>".join(source_lines), unsafe_allow_html=True)
 
 def string_to_color(s):
     # Simple hash to color hex (for demonstration)
