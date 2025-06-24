@@ -3,7 +3,7 @@
 Chatbot for Biodata Catalyst
 
 ## Get documentation
-Clone the [BDC website repo](https://github.com/stagecc/interim-bdc-website/tree/main) to a directory with the same parent directory as this repo.
+Clone the [BDC website repo](https://github.com/stagecc/interim-bdc-website/tree/main) and [BDC docs repo](https://github.com/stagecc/bdc-docs/tree/main) to a directory with the same parent directory as this repo.
 
 ## Copy environment variables
 Copy `.env_example` to `.env` and make any necessary changes

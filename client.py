@@ -126,8 +126,8 @@ def source_link(url, title, type):
 doc_type_order = [
     "faq",
     "page",
+    "docs",
     "update",
-    "fellow",
     "event"
 ]
 
