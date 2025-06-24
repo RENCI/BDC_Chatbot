@@ -126,8 +126,8 @@ def source_link(url, title, type):
 doc_type_order = [
     "faq",
     "page",
-    "docs",
     "update",
+    "fellow",
     "event"
 ]
 
@@ -365,7 +365,9 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         if res.get("flag", None) == 'r':
             answer = res.get("predefined_response", "predefined_response (not found)")
         elif res.get("bdc_response", None) and res.get("dug_response", None):
-            answer = res.get("response", "")
+            #answer = res.get("response", "")
+            # For demo, use bdc response instead of combined response
+            answer = res["bdc_response"]
         elif res.get("bdc_response", None):
             answer = res["bdc_response"]
         elif res.get("dug_response", None):
