@@ -4,6 +4,6 @@ FISMA:
   source: null
 
 Covid-19:
-  response: "This is a placeholder for an appended COVID-19 response"
+  response: "This is a placeholder for an appended COVID-19 response."
   flag: "a"
   source: null
