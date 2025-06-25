@@ -41,7 +41,7 @@ default_rag_chain = RemoteRunnable(url="http://localhost:8000/bdc-bot")
 
 doc_type_dict = defaultdict(lambda: "Source")
 doc_type_dict['page'] = "BDC Web Page"
-doc_type_dict['fellow'] = "BDC Fellow"
+doc_type_dict['docs'] = "BDC Documentation"
 doc_type_dict['update'] = "BDC Update"
 doc_type_dict['event'] = "BDC Event"
 doc_type_dict['faq'] = "BDC FAQ"
@@ -117,6 +117,8 @@ def parse_text(answer, context) -> str:
                 source['title'] = doc["metadata"]['file_path']
             
             sources.append(source)
+        else:
+            print("Duplicate source found:", url)
 
     return output, sources
 
@@ -125,9 +127,9 @@ def source_link(url, title, type):
 
 doc_type_order = [
     "faq",
+    "docs",
     "page",
     "update",
-    "fellow",
     "event"
 ]
 
@@ -213,6 +215,8 @@ def draw_additional_response(response, response_title, show_response, kg=None):
 
             if adjmat is None or df is None:
                 return
+            
+            st.markdown("\n---\nKnowledge Graph:")
             
             d3.graph(adjmat)
             d3.set_node_properties(color=df['label'].values)
@@ -342,7 +346,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
                 draw_sources(sources, False)
             if bdc_response and dug_response:
                 #draw_additional_response(bdc_response, "BDC Response", False)
-                draw_additional_response(dug_response, "DUG Response", False)
+                draw_additional_response(dug_response, "DugBot Response", False)
         
     with st.chat_message('using-bdc'):
         st.markdown(prompt)
@@ -387,8 +391,8 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         display_answer = answer
         if res.get("flag", None) == 'a':
             display_answer += res.get("predefined_response", "predefined_response (not found)")
-        if res.get("dug_response", None):
-            display_answer += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) for more information."
+        #if res.get("dug_response", None):
+        #    display_answer += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) for more information."
         
         
         bdc_response = res.get("bdc_response", "")
@@ -398,17 +402,19 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         
         # display_text += answer
 
-        display_text, sources = parse_text(display_answer, context)
-        
+        if res.get("dug_response", None):
+            dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
 
-        
+        display_text, sources = parse_text(display_answer, context)
+
+
         response_container.markdown(display_text, unsafe_allow_html=True)
 
         draw_sources(sources, False)
 
         if bdc_response and dug_response:
             #draw_additional_response(bdc_response, "BDC Response", False)
-            draw_additional_response(dug_response, "DUG Response", False, dug_kg)
+            draw_additional_response(dug_response, "DugBot Response", False, dug_kg)
     
     # st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['history'].extend([(HumanMessage(content=prompt)), (AIMessage(content=answer))])
