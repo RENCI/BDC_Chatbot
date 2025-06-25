@@ -390,7 +390,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         
         display_answer = answer
         if res.get("flag", None) == 'a':
-            display_answer += res.get("predefined_response", "predefined_response (not found)")
+            display_answer += "\n\n" + res.get("predefined_response", "predefined_response (not found)")
         #if res.get("dug_response", None):
         #    display_answer += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) for more information."
         
