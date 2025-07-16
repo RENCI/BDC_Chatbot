@@ -219,7 +219,7 @@ def draw_additional_response(response, response_title, show_response, kg=None):
             st.markdown("\n---\nKnowledge Graph:")
             
             d3.graph(adjmat)
-            d3.set_node_properties(color=df['label'].values)
+            d3.set_node_properties(label=df['label'].values, color=df['color'].values)
             d3.show(show_slider=False, save_button=False)
                 
 current_chain = default_rag_chain
