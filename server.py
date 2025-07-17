@@ -4,7 +4,7 @@ from langserve import add_routes
 from fastapi.middleware.cors import CORSMiddleware
 
 from langchain.retrievers.document_compressors import FlashrankRerank
-from utils.rag.chain import create_main_chain, create_time_filter, create_router_chain, create_query_classifier_chain, create_input_guardrail_chain
+from utils.rag.chain import create_main_chain, create_time_filter, create_query_classifier_chain, create_input_guardrail_chain, guardrail_route_chain
 from langchain_chroma import Chroma
 from utils import set_emb_llm
 from langchain.globals import set_debug, set_verbose
@@ -43,23 +43,27 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
 llm, guardian_llm, dugbot_chain, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20, 
                                                                                   rerank_top_k=10)
 
-bdcbot_chain = create_main_chain(default_retriever, llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True)
+bdcbot_chain = create_main_chain(default_retriever, llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True, dugbot_chain=dugbot_chain)
 
 print("bdcbot_chain:", bdcbot_chain)
 print("dugbot_chain:", dugbot_chain)
 
-if dugbot_chain:
-    classifier_chain = create_query_classifier_chain(llm)
-    main_chain = create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm)
-else:
-    main_chain = bdcbot_chain    
+# if dugbot_chain:
+#     classifier_chain = create_query_classifier_chain(llm)
+#     main_chain = create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm)
+# else:
+#     main_chain = bdcbot_chain    
+
+
+
+main_chain = bdcbot_chain    
 
 # region: add guardrails
 guardrails_config = RailsConfig.from_path("config")
 guardrails = RunnableRails(guardrails_config, 
                             llm=guardian_llm,
                             verbose=True, 
-                            output_key="answer")
+                            output_key="guardrail_response")
 
 input_guardrail_chain = create_input_guardrail_chain(llm)
 
@@ -73,12 +77,15 @@ main_chain_branch = RunnableBranch(
     lambda x: x
 ) 
 
-chatbot_chain = input_guardrail_chain | main_chain_branch
+# chatbot_chain = input_guardrail_chain | main_chain_branch
+
+chatbot_chain = guardrail_route_chain(input_guardrail_chain, main_chain)
+
 
 # endregion
 app = FastAPI(
     title="BDC Bot",
-    version="1.0",
+    version="0.1",
     description="BDC Bot",
 )
 
@@ -104,8 +111,8 @@ async def redirect_root_to_docs():
 
 # Edit this to add the chain you want to add
 add_routes(app, 
-        #   chatbot_chain,
-          guardrails | main_chain,
+          chatbot_chain,
+        #   guardrails | main_chain,
           path="/bdc-bot")
 
 if __name__ == "__main__":

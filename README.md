@@ -12,12 +12,14 @@ Copy `.env_example` to `.env` and make any necessary changes
 
 ```bash
 pip install -r requirements.txt
+# OR
+pip install langchain_chroma langchain_core langchain_openai langchain-community langchain langchain-ollama langserve[all] langchain-cli flashrank chroma-hnswlib langchain-google-genai rank_bm25 nemoguardrails streamlit streamlit_d3graph fastapi[standard] scikit-learn nltk beautifulsoup4 Babel python-dotenv
 ```
 
 ## Port forwarding for local development using vLLM and Ollama at RENCI
 
 ```bash
-kubectl -n ner port-forward svc/vllm-llama-3-1-8b-instruct 8080:80  # vLLM port-forward
+kubectl -n ner port-forward svc/vllm-server 8080:80  # vLLM port-forward
 
 kubectl -n ner port-forward svc/ollama 11434:11434                  # Ollama port-forward
 ```

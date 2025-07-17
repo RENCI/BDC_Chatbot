@@ -31,7 +31,7 @@ from datetime import datetime, timedelta, date
 
 
 
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser, ListOutputParser, MarkdownListOutputParser
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores.base import VectorStoreRetriever, VectorStore
 
@@ -71,46 +71,30 @@ def load_yaml(yaml_path: str):
 
 def proc_response_pydantic_enum(x):
     # rm non-letter characters, keep underscore and dash
-    x = re.sub(r'[^a-zA-Z_-]', '', x)
+    x = re.sub(r'[^a-zA-Z0-9_-]', '', x)
     x = x.lower()
     return x
 
 
-def merge_responses(x):
-    # append, display with added disclaimer
-    if x["flag"] == 'a':
-        # x["display_answer"] = f"{x['answer']}\n\n<disclaimer>{x['response']}</disclaimer>"
-        x["display_answer"] = f"{x['answer']}\n\n{x['response']}"
-        x["predefined_response"] = x["response"]
-        return x
-    # replace, display replaced text
-    elif x["flag"] == 'r':
-        x["answer"] = f"Answer was replaced with predefined response: \n{x['response']}"
-        # x["display_answer"] = f"<replaced>{x['response']}</replaced>"
-        x["display_answer"] = f"{x['response']}"
-        x["predefined_response"] = x["response"]
-        return x
-    # default, display answer
-    elif x["flag"] == 'd':
-        x["display_answer"] = x["answer"]
-        return x
-    # error
-    else:
-        raise ValueError(f"Invalid flag: {x['flag']}")
+
 
 
 def document_to_dict(x):
-    # Document to dict
-    # relevance_score to float
-    if "context" in x:
-        print("have context")
-        for i, doc in enumerate(x["context"]):
+    docs = []
+    if x is not None:
+
+        for i, doc in enumerate(x):
             doc = doc.dict()
+            del doc["id"]
             if "metadata" in doc and "relevance_score" in doc["metadata"]:
-                print("have relevance_score")
-                doc["metadata"]["relevance_score"] = doc["metadata"]["relevance_score"].item()
-            x["context"][i] = doc
-    return x
+
+                doc["metadata"]["relevance_score"] = float(doc["metadata"]["relevance_score"])
+
+            docs.append(doc)
+
+    return docs
+
+
 
 
 def strip_thought(message: AIMessage):
@@ -123,12 +107,11 @@ def strip_thought(message: AIMessage):
 
 
 class VectorStoreRetrieverWithScore(VectorStoreRetriever):
-
     # init with vectorstore
     def __init__(self, vectorstore: VectorStore, **kwargs: Any) -> None:
         """Initialize with vectorstore."""
         super().__init__(vectorstore=vectorstore, **kwargs)
-        print(self.__dict__)
+
     
     def _get_docs_with_query(
         self, query: str, search_kwargs: Dict[str, Any]
@@ -167,10 +150,7 @@ class BM25RetrieverWithScore(BM25Retriever):
         retriever = super(BM25RetrieverWithScore, cls).from_documents(**kwargs)
         retriever.emb = emb
         return retriever
-    
-    # declear emb
-    # emb = None
-    
+
     
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -178,7 +158,6 @@ class BM25RetrieverWithScore(BM25Retriever):
         processed_query = self.preprocess_func(query)
         return_docs = self.vectorizer.get_top_n(processed_query, self.docs, n=self.k)
         
-        # print("return_docs[0]: ", return_docs[0])
         
         
         # get similarity score of query to each doc
@@ -198,6 +177,14 @@ class BM25RetrieverWithScore(BM25Retriever):
 
 def create_input_guardrail_chain(llm):
     """Creates a chain that checks if user input complies with BDC policies using guardrails."""
+    
+    # Add input extraction chain at the beginning
+    def extract_input_and_history(x):
+        """Extract and format input and chat history"""
+        return {
+            "input": x.get("input", ""),
+            "chat_history": x.get("chat_history", [])
+        }
     
     input_check_prompt = ChatPromptTemplate.from_messages([
         ("system", """You are an input validation assistant for BioData Catalyst (BDC).
@@ -228,26 +215,39 @@ def create_input_guardrail_chain(llm):
         return response.strip().lower() == "yes"
 
     def format_block_message(x: dict) -> dict:
+        # print("format_block_message x: ", x)
         """Format the response when message is blocked"""
         if x["blocked"]:
             return {
-                **x,  
-                "answer": "I apologize, but I cannot process this request as it appears to violate our usage policies. Please ensure your question is related to BDC (BioData Catalyst) and follows our guidelines.",
-                "blocked": True,
-                "chat_history": x["chat_history"],
+                "guardrail_response": "I apologize, but I cannot process this request as it appears to violate our usage policies. Please ensure your question is related to BDC (BioData Catalyst) and follows our guidelines.",
+                "guardrail_context": "",
+                "input": x["input"],
+                "chat_history": x.get("chat_history", []),
             }
-        return x
+        return {
+            "input": x["input"],
+            "chat_history": x.get("chat_history", []),
+        }
 
     guardrail_chain = (
-        RunnablePassthrough.assign(
+        RunnableLambda(extract_input_and_history)
+        | RunnablePassthrough.assign(
             blocked=input_check_prompt | llm | StrOutputParser() | validate_response
-        )
-        | RunnableLambda(format_block_message)
+        ) | RunnableLambda(format_block_message)
     )
+    
 
     return guardrail_chain
 
-
+def guardrail_route_chain(guardrail_chain, main_chain):
+    
+    return (
+        guardrail_chain
+        | RunnableBranch(
+            (lambda x: x.get("guardrail_response"), RunnablePassthrough()),
+            main_chain
+        )
+    )
 
 
 def get_summary(text: str, llm, min_text=300):
@@ -261,98 +261,113 @@ def get_summary(text: str, llm, min_text=300):
     
     return (summary_prompt|llm).invoke({"text": text}).model_dump()['content']
 
+
+
+
+
+class TopicClassification(BaseModel):
+    topic: List[str]
+    allowed_topics: ClassVar[Set[str]]
+
+    @model_validator(mode='after')
+    def validate_topic(self):
+        """Ensure all topics are in allowed_topics or 'other'"""
+        if not hasattr(self, 'allowed_topics'):
+            return self
+        # Allow 'other' as a single value, or all topics in allowed_topics
+        if self.topic == ["other"]:
+            return self
+        invalid = [t for t in self.topic if t not in self.allowed_topics]
+        if invalid:
+            raise ValueError(f"Topics must be in {self.allowed_topics} or ['other'], got {invalid}")
+        return self
+
+
 def create_topic_classifier_chain(topics: List[str], llm):
-    """Creates a chain that classifies user queries into predefined topics."""
-    
-    # Create a custom model class with the allowed topics
+    """Creates a chain that classifies user queries into predefined topics (can be multiple)."""
+
     ModelWithTopics = type(
         'ModelWithTopics',
         (TopicClassification,),
         {'allowed_topics': set(topics)}
     )
-    
+
     topic_list = ", ".join([f'"{topic}"' for topic in topics])
-    
+
     classifier_prompt = ChatPromptTemplate.from_messages([
         ("system", f"""You are a topic classifier. Given a user query, determine if it's related to any of the following topics: {topic_list}.
-        If the query clearly relates to one of these topics, return ONLY that topic name from the list.
-        If it doesn't clearly match any topic, return ONLY "other".
-        Return ONLY the topic name from the list or "other" with no additional text or explanation.
-        The response can ONLY be a topic name from the list or "other". """),
+If the query clearly relates to one or more of these topics, return ONLY a comma-separated list of topic names from the list.
+If it doesn't clearly match any topic, return ONLY "other".
+Return ONLY the topic name(s) from the list, comma-separated, or "other" with no additional text or explanation.
+The response can ONLY be a markdown list of topic names from the list or "other". """),
         ("human", "{input}")
     ])
-    
+
+    def parse_topics(x):
+        # Accepts a string like "topic1,topic2" or "other"
+        x = proc_response_pydantic_enum(x)
+        if x == "other":
+            return ["other"]
+        return [t.strip() for t in x.split(",") if t.strip()]
+
     return (
-        classifier_prompt 
-        | llm 
-        | StrOutputParser() 
-        | RunnableLambda(proc_response_pydantic_enum)
-        | (lambda x: {"topic": x}) 
-        | (lambda x: ModelWithTopics(**x).topic) # return string
+        classifier_prompt
+        | llm
+        | StrOutputParser() # MarkdownListOutputParser()
+        | RunnableLambda(parse_topics)
+        | (lambda x: {"topic": x})
+        | (lambda x: ModelWithTopics(**x).topic)  # returns List[str]
     )
-
-class TopicClassification(BaseModel):
-    topic: str
-    allowed_topics: ClassVar[Set[str]]
-    
-    @model_validator(mode='after')
-    def validate_topic(self):
-        """Ensure topic is either in allowed_topics or 'other'"""
-        if not hasattr(self, 'allowed_topics'):
-            return self
-        if self.topic != "other" and self.topic not in self.allowed_topics:
-            raise ValueError(f"Topic must be one of {self.allowed_topics} or 'other'")
-        return self
-
 
 def create_predefined_response_chain(predefined_responses, llm):
-    
     topics_list = list(predefined_responses.keys())
-
     classifier_chain = create_topic_classifier_chain(topics_list, llm)
-    
-    # region: predefined branch and fallback
-    predefined_chain = RunnableLambda(
-        lambda x: {
+
+    def get_predefined(x):
+        # x["topic"] is a list of topics
+        topics = x["topic"]
+        responses = []
+        contexts = []
+        override_flag = 'd'
+        for t in topics:
+            if t in predefined_responses:
+                responses.append(predefined_responses[t]["response"])
+                contexts.append({
+                    "topic": t,
+                })
+                
+                if override_flag == 'd' and predefined_responses[t]["flag"] == 'a':
+                    override_flag = 'a'
+                elif override_flag in ['d', 'a'] and predefined_responses[t]["flag"] == 'r':
+                    override_flag = 'r'
+
+                
+        return {
             "input": x["input"],
             "chat_history": x.get("chat_history", []),
-            "context": [],
-            "topic": x["topic"],
-            "response": predefined_responses[x["topic"]]["response"],
-            "flag": predefined_responses[x["topic"]]["flag"],
-
+            "predefined_response": responses,
+            "prededined_context": {
+                "flag": override_flag,
+                "contexts": contexts,
+            },
         }
-    )
 
-    predefined_chain_fallback = RunnableLambda(
-        lambda x: {
+    def fallback(x):
+        return {
             "input": x["input"],
             "chat_history": x.get("chat_history", []),
-            "context": [],
-            "topic": x["topic"],
-            "response": None,
-            "flag": 'd',
-
         }
-    )
-    # endregion: predefined branch and fallback
-    
+
     topic_branch = RunnableBranch(
-        (lambda x: x["topic"] in topics_list, predefined_chain),
-        predefined_chain_fallback
+        (lambda x: any(t in topics_list for t in x.get("topic", [])), RunnableLambda(get_predefined)),
+        RunnableLambda(fallback)
     )
-
 
     return (
         RunnablePassthrough.assign(
             topic=classifier_chain
         ) | topic_branch
     )
-
-
-
-
-
 
 
 
@@ -407,7 +422,7 @@ DO NOT USE "NHLBI BioData Catalyst®️" or any short form of it. You MUST ONLY 
 
 
 
-def create_bdc_response_regex_chain():
+def create_bdc_response_regex_chain(answer_key="answer"):
     def process_bdc_names(x):
         
         def remove(match):
@@ -421,8 +436,8 @@ def create_bdc_response_regex_chain():
             return (" BDC " if pre and post else pre + "BDC" + post)
 
         
-        if "answer" in x and x["answer"]:
-            text = x["answer"]
+        if answer_key in x and x.get(answer_key, None):
+            text = x[answer_key]
             # remove terms in parentheses
             text = re.sub(
                 r'(?P<pre>\s*)\(\s*(?:(?:NHLBI\s+)?BioData\s+Catalyst(?:®️)?|BDC)\s*\)(?P<post>\s*)',
@@ -437,7 +452,7 @@ def create_bdc_response_regex_chain():
                 text
             )
 
-            x["answer"] = text
+            x[answer_key] = text
             
         return x
     
@@ -521,7 +536,7 @@ def create_query_classifier_chain(llm):
 
 
 
-def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False):
+def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False, dugbot_chain=None):
     
     
     
@@ -561,50 +576,169 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
     # region: create chains
     rag_chain = create_qa_rag_chain(retriever, llm)
     
-    predefined_responses = load_yaml('./data/predefined_responses.yaml')
+    
 
+    
+    
+    if dugbot_chain is not None:
+        query_classifier_chain = create_query_classifier_chain(llm)
+        dug_response_chain = create_dug_response_chain(dugbot_chain, llm)
+        is_dugbot_exist = True
+    else:
+        query_classifier_chain = None
+        dug_response_chain = None
+        is_dugbot_exist = False
+    
+    
+    
+    predefined_responses = load_yaml('./data/predefined_responses.yaml')
+    
+    # lowercase topics
+    predefined_responses = {k.lower(): v for k, v in predefined_responses.items()}
+    
     predefined_response_chain = create_predefined_response_chain(predefined_responses, llm)
     
     
     
-    response_branch = RunnableBranch(
-        (lambda x: x["flag"] in ['d', 'a'], 
-         lambda x: {**x, **rag_chain.invoke(x)}),
-        (lambda x: x["flag"] == 'r', 
-         lambda x: {**x, "answer": x["response"]}),  
+
+    
+    
+    
+    def create_bdc_response_chain(rag_chain):
+        return (
+            rag_chain
+            | create_bdc_response_regex_chain(answer_key="answer")
+            | RunnableLambda(lambda y: {
+                "bdc_response": y.get("answer"),
+                # "bdc_context": document_to_dict(y.get("context"), key="bdc_context"),
+                "bdc_context": document_to_dict(y.get("context")),
+            })
+        )
+
+    
+    
+    # "dug_response": x["dug_response"]["output"].content,
+    # "dug_kg": x["dug_response"]["extra"]
+    
+    bdc_response_chain = create_bdc_response_chain(rag_chain)
+
+
+    
+    if is_dugbot_exist:
+        both_parallel_chain = RunnableParallel({
+            "bdc_result": bdc_response_chain,
+            "dug_result": dug_response_chain,
+            "input": RunnablePassthrough.assign(input=lambda x: x["input"]),
+        }) | RunnableLambda(lambda x: {
+            "input": x["input"],
+            "bdc_response": x["bdc_result"].get("bdc_response"),
+            "bdc_context": x["bdc_result"].get("bdc_context"),
+            "dug_response": x["dug_result"].get("dug_response"),
+            "dug_context": x["dug_result"].get("dug_context"),
+        })
+        
+        fallback_bdc_chain = bdc_response_chain | RunnableLambda(
+            lambda x: {
+                **x,
+                "dug_response": "",
+                "dug_context": {"error": "DUG Bot is currently unavailable or encountered an error."}
+            }
+        )
+        
+        
+        bdc_dug_rephrase_prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are a helpful assistant work for BDC (Biomedical Data catalyst) that combines and rephrases information from multiple sources 
+            into a single, coherent response. Maintain all factual information while making the response flow naturally.
+            Focus on answering the user's original question clearly and concisely."""),
+            ("human", """Please combine and rephrase the following information into a single, coherent response. Include any mentioned datasets and studies as bullet points, if they are relevant to the question. 
+            that answers this question: {input}
+
+
+            Information from DUG Bot (strict search results for datasets and studies):
+            {dug_response}
+            Information from BDC Bot (general information from BDC website):
+            {bdc_response}
+            
+            
+            Your answer to the question should state the strict search results from the DUG Bot, and then state the more general information from the BDC Bot.
+            """)
+        ])
+        
+        bdc_dug_rephrase_chain = bdc_dug_rephrase_prompt | llm | StrOutputParser()
+    
+        
+        
+        
+        
+        agents_branch = RunnableBranch(
+            (lambda x: x["query_category"] == "bdc" or x["query_category"] == "na", bdc_response_chain),
+            (lambda x: x["query_category"] == "dug", dug_response_chain.with_fallbacks([fallback_bdc_chain])),
+            (lambda x: x["query_category"] == "both", (both_parallel_chain 
+                                                       |RunnablePassthrough.assign(
+                                                           combined_response=bdc_dug_rephrase_chain
+        )).with_fallbacks([fallback_bdc_chain])),
+            bdc_response_chain  # default fallback
+        )
+        
+        
+        
+        # agents_branch = RunnableBranch(
+        #     (lambda x: x["query_category"] == "bdc" or x["query_category"] == "na", bdc_response_chain),
+        #     (lambda x: x["query_category"] == "dug", dug_response_chain),
+        #     (lambda x: x["query_category"] == "both", (both_parallel_chain 
+        #                                                |RunnablePassthrough.assign(
+        #                                                    combined_response=bdc_dug_rephrase_chain
+        # ))),
+        #     bdc_response_chain  # default fallback
+        # )
+        
+        
+        
+        
+        agents_chain = (
+            RunnablePassthrough.assign(query_category=query_classifier_chain)
+            | agents_branch
+            | RunnableLambda(lambda x: {k: v for k, v in x.items() if k != "query_category"})
+        )
+        
+    else:
+        agents_chain = bdc_response_chain
+    
+    
+    
+
+        
+    predef_resp_branch = RunnableBranch(
+        # default/append, rest chains get called
+        (lambda x: x.get("prededined_context", {}).get("flag", None) in ['d', 'a', None],  
+         RunnablePassthrough.assign(**{"_agents": agents_chain})
+         | RunnableLambda(lambda x: {**x.pop("_agents", {}), **x})
+        ),
+        # replace, rest chains skipped
+        (lambda x: x.get("prededined_context", {}).get("flag", None) == 'r', 
+         lambda x: {**x}),  
          lambda x: {**x} # default case
     )
     
+    
+    
+    main_chain = (
+        predefined_response_chain
+        | predef_resp_branch
+        
+    )
 
 
-    
-    main_chain = (predefined_response_chain 
-                  | response_branch 
-                  | create_bdc_response_regex_chain()
-                #   | create_bdc_response_llm_chain(llm)
-                  | RunnableLambda(merge_responses)
-                  | RunnableLambda(document_to_dict))
-
-    
-    # main_chain.get_graph().print_ascii()
-    
-    # return guardrails | main_chain
     return main_chain
     
-
-
-# bdcbot_response or dugbot_response will not be empty if they are called
-def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
+def create_dug_response_chain(dugbot_chain, llm):
     
     dugbot_query_rephrase_chain = ChatPromptTemplate.from_messages([
         ("system", "You are a helpful assistant that rephrases user queries. Your task is to optimize the query for a generic search engine. If the query is asking for the availability of a dataset, remove the search engine specific keywords. Return the optimized query only, without any other text."),
         ("user", "{question}"),
     ]) | llm | StrOutputParser()
     
-    
-    
-    
-    
+
     # region: parallel bdc dug chains
     
     def prepare_dug_history(chat_history):
@@ -613,12 +747,9 @@ def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
             dug_history.append([chat_history[i*2]["content"], chat_history[i*2+1]["content"]])
         return dug_history
     
-    
     def prepare_dug_input(x):
         """Prepares input format for dugbot chain"""
-        
-        # print("dug_chat_history: ", prepare_dug_history(x["chat_history"]))
-        
+
         dug_payload = {
             "input": dugbot_query_rephrase_chain.invoke(x["input"]), 
             # "input": x["input"], 
@@ -628,96 +759,15 @@ def create_router_chain(bdcbot_chain, dugbot_chain, classifier_chain, llm):
 
         }
 
-        print("dug_payload: ", dug_payload)
-        
         return dug_payload
-
-    parallel_chains = RunnableParallel({
-        "bdc_response": bdcbot_chain,
-        "dug_response": prepare_dug_input | dugbot_chain,
-        "input": lambda x: x["input"]  # Pass through the original query
-    }) | RunnableLambda(
-        lambda x:{
-            **x["bdc_response"],
-            "bdc_response": x["bdc_response"]["answer"],
-            "dug_response": x["dug_response"]["output"].content
-        }
-    )
-    # endregion
     
-    # region: combine responses
-    rephrase_prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a helpful assistant work for BDC (Biomedical Data catalyst) that combines and rephrases information from multiple sources 
-        into a single, coherent response. Maintain all factual information while making the response flow naturally.
-        Focus on answering the user's original question clearly and concisely."""),
-        ("human", """Please combine and rephrase the following information into a single, coherent response. Include any mentioned datasets and studies as bullet points, if they are relevant to the question. 
-        that answers this question: {input}
+    # "dug_response": x["dug_response"]["output"].content,
+    # "dug_kg": x["dug_response"]["extra"]
+    return prepare_dug_input | dugbot_chain | RunnableLambda(lambda x: {
+        "dug_response": x["output"].content,
+        "dug_context": x["extra"]
+    })
 
-
-        Information from DUG Bot (strict search results for datasets and studies):
-        {dug_response}
-        Information from BDC Bot (general information from BDC website):
-        {bdc_response}
-        
-        
-        Your answer to the question should state the strict search results from the DUG Bot, and then state the more general information from the BDC Bot.
-        """)
-    ])
-
-    rephrase_chain = RunnableLambda(
-        lambda x: {
-            **x,
-            "bdc_response": x["bdc_response"],
-            "dug_response": x["dug_response"],
-            
-        }
-    ) | RunnablePassthrough.assign(
-        response=rephrase_prompt | llm | StrOutputParser()
-    )
-    
-    
-    
-    # endregion
-    
-    
-    # region: define branches and router chain
-    branches = [
-        (
-            lambda x: x["category"] == "bdc",
-            bdcbot_chain | RunnableLambda(
-                lambda x: {
-                    **x,
-                    "bdcbot_response": x.get("answer", ""),
-                    "dugbot_response": ""
-                }
-            )
-        ),
-        (
-            lambda x: x["category"] == "dug",
-            prepare_dug_input | dugbot_chain | RunnableLambda(
-                lambda x: {
-                    **x,
-                    "bdcbot_response": "",
-                    "dugbot_response": x.get("output", "")
-                }
-            )
-        ),
-        (
-            lambda x: x["category"] == "both",
-            (parallel_chains | rephrase_chain)
-        ),
-        # default case: na, return predefined response
-        bdcbot_chain
-    ]
-
-    # Create the routing chain
-    router_chain = (
-        RunnableLambda(lambda x: {"input": x["input"], "category": classifier_chain.invoke(x), "chat_history": x["chat_history"]})
-        | RunnableBranch(*branches) 
-    )
-
-    # endregion
-    return router_chain
 
 
 

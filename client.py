@@ -8,6 +8,7 @@ from utils import set_emb_llm
 from collections import defaultdict
 from langchain.load.dump import dumps
 from langserve import RemoteRunnable
+from streamlit_d3graph import d3graph
 import math
 
 set_verbose(True)
@@ -40,9 +41,13 @@ default_rag_chain = RemoteRunnable(url="http://localhost:8000/bdc-bot")
 
 doc_type_dict = defaultdict(lambda: "Source")
 doc_type_dict['page'] = "BDC Web Page"
-doc_type_dict['fellow'] = "BDC Fellow"
+doc_type_dict['docs'] = "BDC Documentation"
 doc_type_dict['update'] = "BDC Update"
 doc_type_dict['event'] = "BDC Event"
+doc_type_dict['faq'] = "BDC FAQ"
+
+# Initialize D3 graph
+d3 = d3graph(support=None)
 
 def filter_sources(docs):
     # Split by the maximum distance between scores
@@ -69,12 +74,11 @@ def filter_sources(docs):
     return top_docs
 
 
-def parse_text(answer, context) -> str:
-    output = answer
+def parse_context(context):
     docs = context
 
     if not docs:
-        return output, []
+        return []
     
     sources = []    
     
@@ -112,29 +116,130 @@ def parse_text(answer, context) -> str:
                 source['title'] = doc["metadata"]['file_path']
             
             sources.append(source)
+        else:
+            print("Duplicate source found:", url)
 
     return output, sources
 
 def source_link(url, title, type):
     return st.text(f"[{type}] {title}")
 
+doc_type_order = [
+    "faq",
+    "docs",
+    "page",
+    "update",
+    "event"
+]
+
 def draw_sources(sources, showSources):
     if not sources:
         return
     with st.expander(f"Source{'s' if len(sources) > 1 else ''}", expanded=showSources):
-        source_lines = []
+        # Group sources by doc_type using source_order
+        grouped_sources = {doc_type: [] for doc_type in doc_type_order}
         for source in sources:
-            # Create a formatted line for each source
-            line = f"[{source['doc_type']}] <a href='{source['url']}' target='_blank'>{source['url']}</a>"
-            source_lines.append(line)
-        # Join lines with a line break and render via markdown
-        st.markdown("<br>".join(source_lines), unsafe_allow_html=True)
+            doc_type = source.get('doc_type')
+            if doc_type in grouped_sources:
+                grouped_sources[doc_type].append(source)
+            else:
+                print(f"Unknown doc_type: {doc_type} for source {source['title']}")
 
-def draw_additional_response(response, response_title, show_response):
+        # Display sources by group in order
+        for doc_type in doc_type_order:
+            group = grouped_sources[doc_type]
+            if group:
+                header = f"**{doc_type_dict.get(doc_type, doc_type)}**"
+                source_lines = [header]
+                for source in group:
+                    line = f"<a href='{source['url']}' target='_blank'>{source['title']}</a>"
+                    source_lines.append(line)
+                # Join lines with a line break and render via markdown
+                st.markdown("<br>".join(source_lines), unsafe_allow_html=True)
+
+def string_to_color(s):
+    # Simple hash to color hex (for demonstration)
+    import hashlib
+    if not s:
+        s = "default"
+    return '#' + hashlib.md5(s.encode()).hexdigest()[:6]
+
+def process_kg(kg):
+    # Check if kg has no nodes or edges before displaying
+    if not kg or 'nodes' not in kg or 'edges' not in kg:
+        return None, None
+
+    # Build node and edge lists
+    nodes = kg.get('nodes', [])
+    edges = kg.get('edges', [])
+
+    if not nodes or not edges:
+        return None, None
+
+    # Build node dataframe for d3graph
+    import pandas as pd
+    node_ids = []
+    node_labels = []
+    node_categories = []
+    node_colors = []
+    for node in nodes:
+        node_id = node.get('id')
+        node_ids.append(node_id)
+        node_labels.append(node.get('name', node_id))
+        category = node.get('category', ["biolink:NamedThing"])[0]
+        node_categories.append(category.replace("biolink:", ""))
+        node_colors.append(string_to_color(category))
+    df = pd.DataFrame({
+        'label': node_labels,
+        'category': node_categories,
+        'color': node_colors
+    }, index=node_ids)
+
+    # Build adjacency matrix for d3graph
+    adjmat = pd.DataFrame(0, index=node_ids, columns=node_ids)
+    for edge in edges:
+        source = edge.get('subject')
+        target = edge.get('object')
+        if source in node_ids and target in node_ids:
+            adjmat.at[source, target] = 1
+
+    return adjmat, df
+
+def draw_additional_response(response, response_title, show_response, kg=None):
     with st.expander(response_title, expanded=show_response):
         st.markdown(response)
-    
+
+        if kg is not None:
+            adjmat, df = process_kg(kg.get('knowledge_graph'))
+
+            if adjmat is None or df is None:
+                return
+            
+            st.markdown("\n---\nKnowledge Graph:")
+            
+            d3.graph(adjmat)
+            d3.set_node_properties(label=df['label'].values, color=df['color'].values)
+            d3.show(show_slider=False, save_button=False)
+                
 current_chain = default_rag_chain
+
+
+
+def format_predefined_response(predefined_response_list, predefined_context, main_response):
+    predefined_response = ""
+    if predefined_response_list:
+        for i, predefined_response in enumerate(predefined_response_list):
+            predefined_response += f"{predefined_context[i]["topic"]} response: {predefined_response}\n"
+    else:
+        predefined_response = "No predefined response found"
+    
+    
+    
+    if main_response:
+        predefined_response = f"Main response: {main_response}\n\n {predefined_response}"
+
+    return predefined_response
+
 
 #with st.sidebar:
 #    st.header("BDC Resources")
@@ -172,9 +277,9 @@ Hello! I am the NHLBI BioData Catalyst® Chatbot, also known as BDCBot.
 I am AI powered, and here to support you on your blood, heart, lung
 or sleep research journey.
 
-I have been trained on public websites, but also specifically on approved
+I have been trained on public websites, but specifically developed to answer questions based on approved
 BDC documentation. My answers will be as accurate and as current as the
-documentation I am trained upon. If you want to double check my answers I
+documentation I have available. If you want to double check my answers I
 would encourage you to check the sources outlined in my responses and/or
 contact the [BDC HelpDesk](https://biodatacatalyst.nhlbi.nih.gov/help-and-support/contact-us/). 
 BDC’s support team isn’t just AI powered; we have humans to help you one on one in live video chat by appointment too!
@@ -257,8 +362,8 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
             if sources:
                 draw_sources(sources, False)
             if bdc_response and dug_response:
-                draw_additional_response(bdc_response, "BDC Response", False)
-                draw_additional_response(dug_response, "DUG Response", False)
+                #draw_additional_response(bdc_response, "BDC Response", False)
+                draw_additional_response(dug_response, "DugBot Response", False)
         
     with st.chat_message('using-bdc'):
         st.markdown(prompt)
@@ -271,10 +376,57 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         
         res = current_chain.invoke({"input": prompt, "chat_history": st.session_state['history']})
         
-        # print("current_chain.invoke: \n", res)
+        print("current_chain.invoke: \n", res)
+
+        # answer = res["answer"]
+        
+        
+        
+        
+        
+        
+        if res.get("guardrail_response", None):
+            answer = res["guardrail_response"]
+        else:
+            bdc_response = res.get("bdc_response", "")
+            dug_response = res.get("dug_response", "")
+            dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
+            dug_kg = res.get("dug_context", {}).get("knowledge_graph", None)
+            combined_response = res.get("combined_response", f"{bdc_response}\n\n{dug_response}")
+            
+            if bdc_response:
+                answer = bdc_response
+            elif dug_response:
+                answer = dug_response
+            else:
+                answer = ""
+            
+
+            
+            # format_predefined_response(predefined_response_list, predefined_context, main_response):
+            if res.get("prededined_context", {}):
+                if res["prededined_context"].get("flag", None) == 'r':
+                    answer = format_predefined_response(res.get("predefined_response", []), res["prededined_context"], None)
+                elif res["prededined_context"].get("flag", None) == 'a':
+                    answer = format_predefined_response(res.get("predefined_response", []), res["prededined_context"], answer)
+        
 
         
-        answer = res["answer"]
+        
+        
+        if res.get("flag", None) == 'r':
+            answer = res.get("predefined_response", "predefined_response (not found)")
+        elif res.get("bdc_response", None) and res.get("dug_response", None):
+            #answer = res.get("response", "")
+            # For demo, use bdc response instead of combined response
+            answer = res["bdc_response"]
+        elif res.get("bdc_response", None):
+            answer = res["bdc_response"]
+        elif res.get("dug_response", None):
+            answer = res["dug_response"] 
+        
+
+        
         
         context = res.get("context", [])
         
@@ -282,32 +434,40 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
             context[i] = doc.dict()
         
         
+        print("bot answer: ", answer)
         
-        display_answer = res.get("display_answer", answer)
-        bdc_response = res.get("bdc_response", "")
-        dug_response = res.get("dug_response", "")
+        display_answer = answer
+        # if res.get("flag", None) == 'a':
+        #     display_answer += "\n\n" + res.get("predefined_response", "predefined_response (not found)")
+        #if res.get("dug_response", None):
+        #    display_answer += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) for more information."
+        
+        
+        # bdc_response = res.get("bdc_response", "")
+        # dug_response = res.get("dug_response", "")
+        # dug_kg = res.get("dug_kg")
         # print("flag: ", res["flag"])
         
-        
-        display_text += answer
+        # display_text += answer
 
-        display_text, sources = parse_text(display_answer, context)
-        
-        if dug_response:
-            display_text += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/) for more information."
-        
-        response_container.markdown(display_text, unsafe_allow_html=True)
+        # if res.get("dug_response", None):
+        #     dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
+
+        sources = parse_context(context)
+
+
+        response_container.markdown(answer, unsafe_allow_html=True)
 
         draw_sources(sources, False)
 
         if bdc_response and dug_response:
-            draw_additional_response(bdc_response, "BDC Response", True)
-            draw_additional_response(dug_response, "DUG Response", True)
+            #draw_additional_response(bdc_response, "BDC Response", False)
+            draw_additional_response(dug_response, "DugBot Response", False, dug_kg)
     
     # st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['history'].extend([(HumanMessage(content=prompt)), (AIMessage(content=answer))])
     st.session_state['displayed_history'].append(('using-bdc', prompt, None))
-    st.session_state['displayed_history'].append(('bdc-assistant', display_text, sources))
+    st.session_state['displayed_history'].append(('bdc-assistant', answer, sources))
     st.session_state['metadatas'].append(res)
 
 st.markdown(

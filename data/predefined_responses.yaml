@@ -7,3 +7,8 @@ Covid-19:
   response: "Covid-19 response placeholder (append)"
   flag: "a"
   source: null
+
+vaccine:
+  response: "Vaccine response placeholder (append)"
+  flag: "a"
+  source: null
