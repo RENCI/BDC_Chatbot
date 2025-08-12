@@ -3,7 +3,7 @@ FISMA:
   flag: "r"
   source: null
 
-Covid-19:
+Covid:
   response: "Covid-19 response placeholder (append)"
   flag: "a"
   source: null

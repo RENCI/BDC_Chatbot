@@ -25,7 +25,7 @@ from typing import Any, Dict, ClassVar, Set, List, Iterable, Optional
 
 from datetime import datetime, timedelta, date
 
-
+import warnings
 
 
 
@@ -271,21 +271,35 @@ class TopicClassification(BaseModel):
 
     @model_validator(mode='after')
     def validate_topic(self):
+        # add other to allowed_topics
+        self.allowed_topics.add("other")
+        
+        
         """Ensure all topics are in allowed_topics or 'other'"""
         if not hasattr(self, 'allowed_topics'):
             return self
-        # Allow 'other' as a single value, or all topics in allowed_topics
-        if self.topic == ["other"]:
-            return self
+        # # Allow 'other' as a single value, or all topics in allowed_topics
+        # if self.topic == ["other"]:
+        #     return self
+        
+        #rm invalid topics
         invalid = [t for t in self.topic if t not in self.allowed_topics]
-        if invalid:
-            raise ValueError(f"Topics must be in {self.allowed_topics} or ['other'], got {invalid}")
+        self.topic = [t for t in self.topic if t in self.allowed_topics]
+        
+
+        if invalid and self.topic: # not all topics are invalid
+            warnings.warn(f"Warning: Topics must be in {self.allowed_topics}, got {invalid}")
+            # raise ValueError(f"Topics must be in {self.allowed_topics} or ['other'], got {invalid}")
+        elif not self.topic: # all topics are invalid
+            raise ValueError(f"Topics must be in {self.allowed_topics}, got {invalid}")
         return self
 
 
 def create_topic_classifier_chain(topics: List[str], llm):
     """Creates a chain that classifies user queries into predefined topics (can be multiple)."""
 
+    
+    
     ModelWithTopics = type(
         'ModelWithTopics',
         (TopicClassification,),
@@ -298,8 +312,8 @@ def create_topic_classifier_chain(topics: List[str], llm):
         ("system", f"""You are a topic classifier. Given a user query, determine if it's related to any of the following topics: {topic_list}.
 If the query clearly relates to one or more of these topics, return ONLY a comma-separated list of topic names from the list.
 If it doesn't clearly match any topic, return ONLY "other".
-Return ONLY the topic name(s) from the list, comma-separated, or "other" with no additional text or explanation.
-The response can ONLY be a markdown list of topic names from the list or "other". """),
+Return ONLY the topic name(s) from the list, or "other" with no additional text or explanation.
+The response can ONLY be a markdown list of topic names ("- topic1 \\n- topic2") from the list or "- other". Always use "- " for the list prefix even when the length is 1. """),
         ("human", "{input}")
     ])
 
@@ -313,8 +327,8 @@ The response can ONLY be a markdown list of topic names from the list or "other"
     return (
         classifier_prompt
         | llm
-        | StrOutputParser() # MarkdownListOutputParser()
-        | RunnableLambda(parse_topics)
+        | MarkdownListOutputParser() # MarkdownListOutputParser() StrOutputParser()
+        # | RunnableLambda(parse_topics)
         | (lambda x: {"topic": x})
         | (lambda x: ModelWithTopics(**x).topic)  # returns List[str]
     )
@@ -858,7 +872,7 @@ def create_time_filter(search_query: date_filter_params = None):
 
 
 
-def create_chunk_contextualizer_chain(llm, use_metadata_context=False):
+def create_chunk_contextualizer_chain(llm, use_metadata_context=False, is_doc_summary=False):
     
     if use_metadata_context:
         contextualize_prompt = ChatPromptTemplate.from_template(
@@ -872,7 +886,19 @@ Here is the chunk we want to situate with the metadata context
 
 Please give a short succinct natural language context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else.
 """)
-    
+    elif is_doc_summary:
+        contextualize_prompt = ChatPromptTemplate.from_template(
+"""<document_summary>
+{context}
+</document_summary>
+Here is the chunk we want to situate within the whole document
+<chunk>
+{chunk_content}
+</chunk>
+
+Please give a short succinct natural language context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else.
+""")
+
     else:
         contextualize_prompt = ChatPromptTemplate.from_template(
 """<document>

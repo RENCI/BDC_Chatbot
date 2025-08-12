@@ -1,4 +1,4 @@
-
+import re
 from pathlib import Path
 from tqdm import tqdm
 import pickle
@@ -8,6 +8,8 @@ from .preproc.utils import contextualize_chunk, paths_to_urls, split_by_sections
 from .preproc.proc_BDC_repo import get_fellow_files, get_data_mdx_files, clean_mdx, get_all_mdx_paths, clean_path
 from .preproc.proc_freshdesk import scrape_freshdesk
 from .preproc.proc_BDC_docs import get_bdc_docs_md_files, chunk_docs_md_by_headers
+
+from .preproc.proc_BDC_vids import proc_BDC_vids_Google_Sheet
 
 
 from . import set_emb_llm
@@ -218,6 +220,24 @@ for i, chunk in tqdm(enumerate(content_list), desc="Contextualizing chunks", tot
 # endregion
 
 
+# region: process videos
+print("Processing videos...")
+all_text, all_metadata = proc_BDC_vids_Google_Sheet(url="https://docs.google.com/spreadsheets/d/1vUVMffOGz3Eggu4RjZSjSRToQ3Ydc2uHxCjSDdOpvug/edit?gid=397146063#gid=397146063")
+
+
+vids_data = []
+
+for i in tqdm(range(len(all_text))):
+    for j in range(len(all_text[i])):
+        contextualized_chunk = contextualize_chunk(llm, all_text[i][j], whole_document=all_metadata[i][j]['summary'], is_doc_summary=True)
+        temp_metadata = all_metadata[i][j].copy()
+        temp_metadata['content'] = all_text[i][j]
+        temp_metadata['timestamp_url'] = "https://youtu.be/" + re.search(r'v=([^&]+)', temp_metadata['video_url']).group(1) + f"?t={int(temp_metadata['start_seconds'])}"
+        vids_data.append({'metadata': temp_metadata, 'content': contextualized_chunk})
+
+
+
+# endregion
 
 
 
@@ -240,3 +260,6 @@ with open(save_dir+'/freshdesk.pkl', 'wb') as f:
 
 with open(save_dir+'/docs.pkl', 'wb') as f:
     pickle.dump(docs_data, f)
+
+with open(save_dir+'/vids.pkl', 'wb') as f:
+    pickle.dump(vids_data, f)
