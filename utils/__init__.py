@@ -74,13 +74,13 @@ def set_emb_llm():
     if EMBEDDING_MODEL_PROVIDER == "openai":
         if not EMBEDDING_MODEL:
             EMBEDDING_MODEL = "text-embedding-3-small"
-        emb = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+        emb = OpenAIEmbeddings(api_key=OPENAI_API_KEY, model=EMBEDDING_MODEL)
         print("provider: ", EMBEDDING_MODEL_PROVIDER, "model: ", EMBEDDING_MODEL)
     
     elif EMBEDDING_MODEL_PROVIDER == "google":
         if not EMBEDDING_MODEL:
             EMBEDDING_MODEL = "models/text-embedding-004"
-        emb = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
+        emb = GoogleGenerativeAIEmbeddings(api_key=GOOGLE_AI_API_KEY, model=EMBEDDING_MODEL)
         print("provider: ", EMBEDDING_MODEL_PROVIDER, "model: ", EMBEDDING_MODEL)
     
     elif EMBEDDING_MODEL_PROVIDER == "vllm":
