@@ -317,19 +317,19 @@ The response can ONLY be a markdown list of topic names ("- topic1 \\n- topic2")
         ("human", "{input}")
     ])
 
-    def parse_topics(x):
-        # Accepts a string like "topic1,topic2" or "other"
-        x = proc_response_pydantic_enum(x)
-        if x == "other":
-            return ["other"]
-        return [t.strip() for t in x.split(",") if t.strip()]
 
+    def topics_wrapper(x):
+        if len(x) == 0:
+            return {"topic": ["other"]}
+        return {"topic": x}
+    
+    
     return (
         classifier_prompt
         | llm
         | MarkdownListOutputParser() # MarkdownListOutputParser() StrOutputParser()
         # | RunnableLambda(parse_topics)
-        | (lambda x: {"topic": x})
+        | RunnableLambda(topics_wrapper)
         | (lambda x: ModelWithTopics(**x).topic)  # returns List[str]
     )
 
