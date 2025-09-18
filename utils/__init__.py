@@ -80,7 +80,7 @@ def set_emb_llm():
     elif EMBEDDING_MODEL_PROVIDER == "google":
         if not EMBEDDING_MODEL:
             EMBEDDING_MODEL = "models/text-embedding-004"
-        emb = GoogleGenerativeAIEmbeddings(api_key=GOOGLE_AI_API_KEY, model=EMBEDDING_MODEL)
+        emb = GoogleGenerativeAIEmbeddings(google_api_key=GOOGLE_AI_API_KEY, model=EMBEDDING_MODEL)
         print("provider: ", EMBEDDING_MODEL_PROVIDER, "model: ", EMBEDDING_MODEL)
     
     elif EMBEDDING_MODEL_PROVIDER == "vllm":
