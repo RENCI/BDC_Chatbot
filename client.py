@@ -375,27 +375,35 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
         # Add spinner while thinking
         with st.spinner("Generating response...", show_time=True):
 
-            print("chat_history: ", st.session_state['history'])
+            #print("chat_history: ", st.session_state['history'])
             
             res = current_chain.invoke({"input": prompt, "chat_history": st.session_state['history']})
             
-            print("current_chain.invoke: \n", res)
+            #print("current_chain.invoke: \n", res)                   
 
-            # answer = res["answer"]
+            # print keys from res
+            print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+            print("res keys: ", res.keys())
             
-            
-            
-            
-            
-            
+            # Create answer from response
+            answer = ""
+
+
+            # XXX             
+            # FIRST: Get working with answer string, as is, ignoring code
+            # SECOND: Refactor to store the full response in session state and create a function that displays here and for previous responses
+
             if res.get("guardrail_response", None):
                 answer = res["guardrail_response"]
+            elif res.get("predefined_response"):                
+                # Ignoring topic list and flag for now, just show predefined response
+                answer = res.get("predefined_response", "predefined_response (not found)")
             else:
-                bdc_response = res.get("bdc_response", "")
-                dug_response = res.get("dug_response", "")
-                dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
+                # Collec other responses
+                bdc_response = res.get("bdc_response", None)
+                dug_response = res.get("dug_response", None)
                 dug_kg = res.get("dug_context", {}).get("knowledge_graph", None)
-                combined_response = res.get("combined_response", f"{bdc_response}\n\n{dug_response}")
+                #combined_response = res.get("combined_response", f"{bdc_response}\n\n{dug_response}")
                 
                 if bdc_response:
                     answer = bdc_response
@@ -404,30 +412,13 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
                 else:
                     answer = ""
                 
-
-                
                 # format_predefined_response(predefined_response_list, predefined_context, main_response):
                 if res.get("prededined_context", {}):
                     if res["prededined_context"].get("flag", None) == 'r':
                         answer = format_predefined_response(res.get("predefined_response", []), res["prededined_context"], None)
                     elif res["prededined_context"].get("flag", None) == 'a':
                         answer = format_predefined_response(res.get("predefined_response", []), res["prededined_context"], answer)
-            
-
-            
-            
-            
-            if res.get("flag", None) == 'r':
-                answer = res.get("predefined_response", "predefined_response (not found)")
-            elif res.get("bdc_response", None) and res.get("dug_response", None):
-                #answer = res.get("response", "")
-                # For demo, use bdc response instead of combined response
-                answer = res["bdc_response"]
-            elif res.get("bdc_response", None):
-                answer = res["bdc_response"]
-            elif res.get("dug_response", None):
-                answer = res["dug_response"] 
-            
+          
 
             
             
@@ -435,26 +426,6 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
             
             for i, doc in enumerate(context):
                 context[i] = doc.dict()
-            
-            
-            print("bot answer: ", answer)
-            
-            display_answer = answer
-            # if res.get("flag", None) == 'a':
-            #     display_answer += "\n\n" + res.get("predefined_response", "predefined_response (not found)")
-            #if res.get("dug_response", None):
-            #    display_answer += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) for more information."
-            
-            
-            # bdc_response = res.get("bdc_response", "")
-            # dug_response = res.get("dug_response", "")
-            # dug_kg = res.get("dug_kg")
-            # print("flag: ", res["flag"])
-            
-            # display_text += answer
-
-            # if res.get("dug_response", None):
-            #     dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
 
             sources = parse_context(context)
 
