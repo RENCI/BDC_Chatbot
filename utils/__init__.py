@@ -47,7 +47,7 @@ def set_emb_llm():
     elif COMPLETION_MODEL_PROVIDER == "google":
         if not COMPLETION_MODEL:
             COMPLETION_MODEL = "gemini-2.0-flash"
-        llm = ChatGoogleGenerativeAI(api_key=GOOGLE_AI_API_KEY, model=COMPLETION_MODEL, temperature=0)
+        llm = ChatGoogleGenerativeAI(google_api_key=GOOGLE_AI_API_KEY, model=COMPLETION_MODEL, temperature=0)
         print("provider: ", COMPLETION_MODEL_PROVIDER, "model: ", COMPLETION_MODEL)
     
     elif COMPLETION_MODEL_PROVIDER == "vllm":
