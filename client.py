@@ -36,7 +36,8 @@ bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
 
 
-default_rag_chain = RemoteRunnable(url="http://localhost:8000/bdc-bot")
+#default_rag_chain = RemoteRunnable(url="http://localhost:8000/bdc-bot")
+default_rag_chain = RemoteRunnable(url="https://bdcbot-s.apps.renci.org/bdc-bot")
 
 
 doc_type_dict = defaultdict(lambda: "Source")
@@ -370,99 +371,101 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
 
     with st.chat_message('bdc-assistant'):
         response_container = st.empty()
-        response_container.markdown("Thinking...")
 
-        print("chat_history: ", st.session_state['history'])
-        
-        res = current_chain.invoke({"input": prompt, "chat_history": st.session_state['history']})
-        
-        print("current_chain.invoke: \n", res)
+        # Add spinner while thinking
+        with st.spinner("Generating response...", show_time=True):
 
-        # answer = res["answer"]
-        
-        
-        
-        
-        
-        
-        if res.get("guardrail_response", None):
-            answer = res["guardrail_response"]
-        else:
-            bdc_response = res.get("bdc_response", "")
-            dug_response = res.get("dug_response", "")
-            dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
-            dug_kg = res.get("dug_context", {}).get("knowledge_graph", None)
-            combined_response = res.get("combined_response", f"{bdc_response}\n\n{dug_response}")
+            print("chat_history: ", st.session_state['history'])
             
-            if bdc_response:
-                answer = bdc_response
-            elif dug_response:
-                answer = dug_response
+            res = current_chain.invoke({"input": prompt, "chat_history": st.session_state['history']})
+            
+            print("current_chain.invoke: \n", res)
+
+            # answer = res["answer"]
+            
+            
+            
+            
+            
+            
+            if res.get("guardrail_response", None):
+                answer = res["guardrail_response"]
             else:
-                answer = ""
+                bdc_response = res.get("bdc_response", "")
+                dug_response = res.get("dug_response", "")
+                dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
+                dug_kg = res.get("dug_context", {}).get("knowledge_graph", None)
+                combined_response = res.get("combined_response", f"{bdc_response}\n\n{dug_response}")
+                
+                if bdc_response:
+                    answer = bdc_response
+                elif dug_response:
+                    answer = dug_response
+                else:
+                    answer = ""
+                
+
+                
+                # format_predefined_response(predefined_response_list, predefined_context, main_response):
+                if res.get("prededined_context", {}):
+                    if res["prededined_context"].get("flag", None) == 'r':
+                        answer = format_predefined_response(res.get("predefined_response", []), res["prededined_context"], None)
+                    elif res["prededined_context"].get("flag", None) == 'a':
+                        answer = format_predefined_response(res.get("predefined_response", []), res["prededined_context"], answer)
             
 
             
-            # format_predefined_response(predefined_response_list, predefined_context, main_response):
-            if res.get("prededined_context", {}):
-                if res["prededined_context"].get("flag", None) == 'r':
-                    answer = format_predefined_response(res.get("predefined_response", []), res["prededined_context"], None)
-                elif res["prededined_context"].get("flag", None) == 'a':
-                    answer = format_predefined_response(res.get("predefined_response", []), res["prededined_context"], answer)
-        
+            
+            
+            if res.get("flag", None) == 'r':
+                answer = res.get("predefined_response", "predefined_response (not found)")
+            elif res.get("bdc_response", None) and res.get("dug_response", None):
+                #answer = res.get("response", "")
+                # For demo, use bdc response instead of combined response
+                answer = res["bdc_response"]
+            elif res.get("bdc_response", None):
+                answer = res["bdc_response"]
+            elif res.get("dug_response", None):
+                answer = res["dug_response"] 
+            
 
-        
-        
-        
-        if res.get("flag", None) == 'r':
-            answer = res.get("predefined_response", "predefined_response (not found)")
-        elif res.get("bdc_response", None) and res.get("dug_response", None):
-            #answer = res.get("response", "")
-            # For demo, use bdc response instead of combined response
-            answer = res["bdc_response"]
-        elif res.get("bdc_response", None):
-            answer = res["bdc_response"]
-        elif res.get("dug_response", None):
-            answer = res["dug_response"] 
-        
+            
+            
+            context = res.get("context", [])
+            
+            for i, doc in enumerate(context):
+                context[i] = doc.dict()
+            
+            
+            print("bot answer: ", answer)
+            
+            display_answer = answer
+            # if res.get("flag", None) == 'a':
+            #     display_answer += "\n\n" + res.get("predefined_response", "predefined_response (not found)")
+            #if res.get("dug_response", None):
+            #    display_answer += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) for more information."
+            
+            
+            # bdc_response = res.get("bdc_response", "")
+            # dug_response = res.get("dug_response", "")
+            # dug_kg = res.get("dug_kg")
+            # print("flag: ", res["flag"])
+            
+            # display_text += answer
 
-        
-        
-        context = res.get("context", [])
-        
-        for i, doc in enumerate(context):
-            context[i] = doc.dict()
-        
-        
-        print("bot answer: ", answer)
-        
-        display_answer = answer
-        # if res.get("flag", None) == 'a':
-        #     display_answer += "\n\n" + res.get("predefined_response", "predefined_response (not found)")
-        #if res.get("dug_response", None):
-        #    display_answer += "\n\nVisit the [DUG Bot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) for more information."
-        
-        
-        # bdc_response = res.get("bdc_response", "")
-        # dug_response = res.get("dug_response", "")
-        # dug_kg = res.get("dug_kg")
-        # print("flag: ", res["flag"])
-        
-        # display_text += answer
+            # if res.get("dug_response", None):
+            #     dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
 
-        # if res.get("dug_response", None):
-        #     dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
-
-        sources = parse_context(context)
+            sources = parse_context(context)
 
 
-        response_container.markdown(answer, unsafe_allow_html=True)
+            response_container.markdown(answer, unsafe_allow_html=True)
 
-        draw_sources(sources, False)
+            draw_sources(sources, False)
 
-        if bdc_response and dug_response:
-            #draw_additional_response(bdc_response, "BDC Response", False)
-            draw_additional_response(dug_response, "DugBot Response", False, dug_kg)
+            if bdc_response and dug_response:
+                #draw_additional_response(bdc_response, "BDC Response", False)
+                draw_additional_response(dug_response, "DugBot Response", False, dug_kg)
     
     # st.session_state['history'].extend([dumps(HumanMessage(content=prompt)), dumps(AIMessage(content=answer))])
     st.session_state['history'].extend([(HumanMessage(content=prompt)), (AIMessage(content=answer))])
