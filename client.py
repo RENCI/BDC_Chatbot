@@ -1,17 +1,9 @@
 import streamlit as st
-from langchain_chroma import Chroma
 from langchain_core.messages import HumanMessage, AIMessage
-from langchain.retrievers.document_compressors import FlashrankRerank
-from langchain.globals import set_debug, set_verbose
-from utils.rag.chain import create_main_chain, create_time_filter
-from utils import set_emb_llm
 from collections import defaultdict
-from langchain.load.dump import dumps
 from langserve import RemoteRunnable
 from streamlit_d3graph import d3graph
 import math
-
-set_verbose(True)
 
 st.set_page_config(
     page_title="BDC Bot",
@@ -383,6 +375,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
 
             # print keys from res
             print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+            print("input: ", res.get("input", ""))
             print("res keys: ", res.keys())
             
             # Create answer from response
@@ -482,6 +475,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
     st.session_state['displayed_history'].append(('bdc-assistant', answer, sources))
     st.session_state['metadatas'].append(res)
 
+# Disclaimer at bottom right
 st.markdown(
     """
 <style>
