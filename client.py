@@ -120,7 +120,7 @@ def parse_context(context):
         else:
             print("Duplicate source found:", url)
 
-    return output, sources
+    return sources
 
 def source_link(url, title, type):
     return st.text(f"[{type}] {title}")
@@ -398,8 +398,9 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
             else:
                 bdc_response = res.get("bdc_response", "")
                 dug_response = res.get("dug_response", "")
-                dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
-                dug_kg = res.get("dug_context", {}).get("knowledge_graph", None)
+                if dug_response:
+                    dug_response += "\n\n*Visit [DugBot](https://search-dev.biodatacatalyst.renci.org/chat-v2/) to continue this conversation.*"
+                dug_kg = res.get("dug_context", {}).get("dug_kg", None)
                 combined_response = res.get("combined_response", f"{bdc_response}\n\n{dug_response}")
                 
                 if bdc_response:
@@ -436,7 +437,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
 
             
             
-            context = res.get("context", [])
+            context = res.get("bdc_context", [])
             
             for i, doc in enumerate(context):
                 context[i] = doc.dict()
@@ -469,6 +470,9 @@ if prompt := (st.chat_input("Ask a question") or st.session_state['sample_prompt
             draw_sources(sources, False)
 
             if bdc_response and dug_response:
+                print(dug_response)
+                res.get("dug_context", {})
+
                 #draw_additional_response(bdc_response, "BDC Response", False)
                 draw_additional_response(dug_response, "DugBot Response", False, dug_kg)
     
