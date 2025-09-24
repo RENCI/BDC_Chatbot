@@ -355,8 +355,11 @@ with st.chat_message("bdc-assistant"):
 if prompt := (st.chat_input("Ask a question") or st.session_state["sample_prompt_button_pressed"]):   
     for history in st.session_state["history"]:        
         with st.chat_message("using-bdc"):
+            st.empty()
             display_input(history.get("input", ""))
         with st.chat_message("bdc-assistant"):
+            # Need empty to avoid stale greyed out elements with spinner
+            st.empty()
             display_response(history.get("response", {}))
 
     with st.chat_message("using-bdc"):
@@ -368,31 +371,31 @@ if prompt := (st.chat_input("Ask a question") or st.session_state["sample_prompt
             # Get response from server
             response = current_chain.invoke({"input": prompt, "chat_history": st.session_state["chat_history"]})
         
-            display_response(response, showBDCSources=True)
-            
-            # Create answer from response to store for chat history
-            answer = ""
-            separator = "\n\n"
+        display_response(response, showBDCSources=True)
+        
+        # Create answer from response to store for chat history
+        answer = ""
+        separator = "\n\n"
 
-            # Combine multiple responses if they exist
-            if response.get("guardrail_response", None):
-                answer += response["guardrail_response"]
-            if response.get("predefined_response", None):
-                for predefined in response.get("predefined_response", []):
-                    answer += separator
-                    answer += predefined
-            if response.get("bdc_response", None):
+        # Combine multiple responses if they exist
+        if response.get("guardrail_response", None):
+            answer += response["guardrail_response"]
+        if response.get("predefined_response", None):
+            for predefined in response.get("predefined_response", []):
                 answer += separator
-                answer += response["bdc_response"]
-            if response.get("dug_response", None):
-                answer += separator
-                answer += response["dug_response"]
-            #if response.get("combined_response", None):
-            #    answer += separator
-            #    answer += response["combined_response"]
-            if response.get("code_response", None):
-                answer += separator
-                answer += response["code_response"]
+                answer += predefined
+        if response.get("bdc_response", None):
+            answer += separator
+            answer += response["bdc_response"]
+        if response.get("dug_response", None):
+            answer += separator
+            answer += response["dug_response"]
+        #if response.get("combined_response", None):
+        #    answer += separator
+        #    answer += response["combined_response"]
+        if response.get("code_response", None):
+            answer += separator
+            answer += response["code_response"]
 
     # Store prompts and answer for history to send as context for converstion   
     st.session_state["chat_history"].extend([(HumanMessage(content=prompt)), (AIMessage(content=answer))])
