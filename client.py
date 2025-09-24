@@ -4,6 +4,13 @@ from collections import defaultdict
 from langserve import RemoteRunnable
 from streamlit_d3graph import d3graph
 import math
+import argparse
+
+# Parse command line arguments
+parser = argparse.ArgumentParser(description="BDC Bot")
+parser.add_argument("--timer", action="store_true", help="Enable timer display")
+args = parser.parse_args()
+timer_enabled = args.timer
 
 st.set_page_config(
     page_title="BDC Bot",
@@ -74,7 +81,7 @@ def parse_bdc_context(context):
   
     docs = []  
     for doc in context:
-        docs.append(doc.dict())  
+        docs.append(doc.model_dump())  
     
     top_docs = filter_sources(docs)
     
@@ -367,7 +374,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state["sample_prompt
 
     with st.chat_message("bdc-assistant"):
         # Add spinner while thinking
-        with st.spinner("Generating response...", show_time=True):            
+        with st.spinner("Generating response...", show_time=timer_enabled):            
             # Get response from server
             response = current_chain.invoke({"input": prompt, "chat_history": st.session_state["chat_history"]})
         
