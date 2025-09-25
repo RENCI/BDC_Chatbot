@@ -550,28 +550,38 @@ def create_query_classifier_chain(llm):
 
 
 
-def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False, dugbot_chain=None):
+def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False, dugbot_chain=None, return_similarity_score=False):
     
-    
+    if hybrid_retriever:
+        emb_retriever_top_k = retriever_top_k//2
+    else:
+        emb_retriever_top_k = retriever_top_k
     
     # region: init retriever
-    if vectorstore is not None:
+    if return_similarity_score:
         print("using RetrieverWithScore")
         # retriever = RetrieverWithScore(vectorstore, search_type="similarity_score_threshold", search_kwargs={'score_threshold': score_threshold,'k':retriever_top_k})
-        retriever = VectorStoreRetrieverWithScore(vectorstore, search_kwargs={'k':retriever_top_k})
+        retriever = VectorStoreRetrieverWithScore(vectorstore, search_kwargs={'k':emb_retriever_top_k})
+    else:
+        # retriever = VectorStoreRetriever(vectorstore=vectorstore, search_kwargs={'k':emb_retriever_top_k})
+        retriever = vectorstore.as_retriever(search_kwargs={'k':emb_retriever_top_k})
     
 
     
     if hybrid_retriever:
         print("using hybrid retriever")
-        emb_retriever_top_k = retriever_top_k//2
+        
         
         documents = [Document(page_content=doc, metadata=meta) for doc, meta in zip(vectorstore.get()["documents"], vectorstore.get()["metadatas"])]
         
-        # TODO: add similarity score to metadata
-        bm25_retriever = BM25RetrieverWithScore.from_documents(documents = documents, 
-                                                      k=retriever_top_k-emb_retriever_top_k, 
-                                                      preprocess_func=word_tokenize, emb=emb)
+        if return_similarity_score:
+            bm25_retriever = BM25RetrieverWithScore.from_documents(documents = documents, 
+                                                          k=retriever_top_k-emb_retriever_top_k, 
+                                                          preprocess_func=word_tokenize, emb=emb)
+        else:
+            bm25_retriever = BM25Retriever.from_documents(documents = documents, 
+                                                          k=retriever_top_k-emb_retriever_top_k, 
+                                                          preprocess_func=word_tokenize)
         
         
         retriever = EnsembleRetriever(
@@ -589,7 +599,6 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
     
     # region: create chains
     rag_chain = create_qa_rag_chain(retriever, llm)
-    
     
 
     
