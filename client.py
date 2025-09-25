@@ -8,9 +8,12 @@ import argparse
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description="BDC Bot")
-parser.add_argument("--timer", action="store_true", help="Enable timer display")
+parser.add_argument("--show_timer", action="store_true", help="Enable timer display")
+parser.add_argument("--use_remote_server", action="store_true", help="Use remote server on Sterling")
 args = parser.parse_args()
-timer_enabled = args.timer
+show_timer = args.show_timer
+use_remote_server = args.use_remote_server
+
 
 st.set_page_config(
     page_title="BDC Bot",
@@ -35,8 +38,10 @@ bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
 
 # Set the server to use, local or remote
-#default_rag_chain = RemoteRunnable(url="http://localhost:8000/bdc-bot")
-default_rag_chain = RemoteRunnable(url="https://bdcbot-s.apps.renci.org/bdc-bot")
+if use_remote_server:
+    default_rag_chain = RemoteRunnable(url="https://bdcbot-s.apps.renci.org/bdc-bot")
+else:
+    default_rag_chain = RemoteRunnable(url="http://localhost:8000/bdc-bot")
 
 # Dict for source document types
 doc_type_dict = defaultdict(lambda: "Source")
@@ -45,6 +50,7 @@ doc_type_dict["docs"] = "BDC Documentation"
 doc_type_dict["update"] = "BDC Update"
 doc_type_dict["event"] = "BDC Event"
 doc_type_dict["faq"] = "BDC FAQ"
+doc_type_dict["video"] = "BDC Video"
 
 # Initialize D3 graph for knowledge graph visualization
 d3 = d3graph(support=None)
@@ -94,6 +100,8 @@ def parse_bdc_context(context):
             url = doc["metadata"]["page_url"]
         elif "remote_file_path" in doc["metadata"]:
             url = doc["metadata"]["remote_file_path"] 
+        elif "timestamp_url" in doc["metadata"]:
+            url = doc["metadata"]["timestamp_url"]
         
         if not any(source.get("url") == url for source in sources):
             source = {
@@ -128,8 +136,9 @@ doc_type_order = [
     "faq",
     "docs",
     "page",
+    "video",
     "update",
-    "event"
+    "event",
 ]
 
 # Draw BDC documentation sources
@@ -374,7 +383,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state["sample_prompt
 
     with st.chat_message("bdc-assistant"):
         # Add spinner while thinking
-        with st.spinner("Generating response...", show_time=timer_enabled):            
+        with st.spinner("Generating response...", show_time=show_timer):            
             # Get response from server
             response = current_chain.invoke({"input": prompt, "chat_history": st.session_state["chat_history"]})
         
