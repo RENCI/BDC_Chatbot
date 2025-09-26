@@ -7,7 +7,7 @@ from .preproc.utils import contextualize_chunk, paths_to_urls, split_by_sections
 
 from .preproc.proc_BDC_repo import get_fellow_files, get_data_mdx_files, clean_mdx, get_all_mdx_paths, clean_path
 from .preproc.proc_freshdesk import scrape_freshdesk
-from .preproc.proc_BDC_docs import get_bdc_docs_md_files, chunk_docs_md_by_headers
+from .preproc.proc_BDC_docs import get_bdc_docs_md_files, chunk_docs_md_by_headers, get_bdc_gitbook_md_files
 
 from .preproc.proc_BDC_vids import proc_BDC_vids_Google_Sheet
 
@@ -18,6 +18,8 @@ emb, llm, guardian_llm, dugbot_chain, DB_PATH = set_emb_llm()
 
 base_url = "https://biodatacatalyst.nhlbi.nih.gov/"
 github_base_url = "https://github.com/stagecc/interim-bdc-website/tree/main/"
+gitbook_base_url = "https://bdcatalyst.gitbook.io/biodata-catalyst-documentation/"
+gitbook_root_dir = "../bdc-gitbook/"
 
 data_dir = "../interim-bdc-website/src/data/"
 pages_dir = '../interim-bdc-website/src/pages/'
@@ -193,7 +195,8 @@ print("Processing docs...")
 docs_data = []
 
 
-md_file_paths = get_bdc_docs_md_files()
+#md_file_paths = get_bdc_docs_md_files()
+md_file_paths = get_bdc_gitbook_md_files(gitbook_root_dir)
 
 
 metadata_list = []
@@ -206,13 +209,17 @@ for file_path in tqdm(md_file_paths):
 
 # contextualize_chunk, add remote_file_path
 contextualized_chunk_list = []
+gitbook_root_dir_len = len(gitbook_root_dir)
 for i, chunk in tqdm(enumerate(content_list), desc="Contextualizing chunks", total=len(content_list)):
     contextualized_chunk_list.append(contextualize_chunk(llm, chunk, whole_document=metadata_list[i]['whole_document']))
     metadata_list[i]['contextualized_chunk'] = contextualized_chunk_list[i]
     
     
     # TODO: don't hardcode the url, don't use github link
-    metadata_list[i]['remote_file_path'] = "https://github.com/stagecc/bdc-docs/tree/main/" + metadata_list[i]['source'][12:]
+    #metadata_list[i]['remote_file_path'] = "https://github.com/stagecc/bdc-docs/tree/main/" + metadata_list[i]['source'][12:]
+
+    # For gitbook
+    metadata_list[i]['page_url'] = gitbook_base_url + metadata_list[i]['source'][gitbook_root_dir_len:-3]  # replace root and remove .md suffix
     
     
     docs_data.append({'metadata': metadata_list[i], 'content': chunk})
