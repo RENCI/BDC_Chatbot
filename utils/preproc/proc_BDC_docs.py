@@ -19,6 +19,38 @@ def get_bdc_docs_md_files(root_dir="../bdc-docs/docs/docs"):
                 mdx_files.append(full_path)
     return mdx_files
 
+gitbook_include_dirs = [
+    "data-management"
+]
+
+gitbook_exclude = [
+    "summary.md",
+    "nih-recover-release-notes.md"  # contains tables and is too large for the context window
+]
+
+def get_bdc_gitbook_md_files(root_dir="../bdc-gitbook"):
+    mdx_files = []
+
+    # Only include files that are descendants of the include dirs
+    include_abs = [os.path.join(root_dir, d) for d in gitbook_include_dirs]
+
+    for dirpath, dirnames, filenames in os.walk(root_dir, topdown=True):
+        # Filter out directories that are not in include_abs or their descendants
+        dirnames[:] = [d for d in dirnames if any(
+            os.path.commonpath([os.path.join(dirpath, d), inc]) == inc for inc in include_abs
+        )]
+
+        # Only process files if dirpath is a descendant of one of the include dirs
+        if any(os.path.commonpath([dirpath, inc]) == inc for inc in include_abs):
+            for filename in filenames:
+                if filename.endswith('.md') and filename.lower() not in gitbook_exclude:
+                    full_path = os.path.join(dirpath, filename)
+                    mdx_files.append(full_path)
+
+    # Print number of files found
+    print(f"Kept {len(mdx_files)} markdown files from {root_dir}")
+
+    return mdx_files
 
 def load_docs_md(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
