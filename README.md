@@ -4,6 +4,7 @@ Chatbot for Biodata Catalyst
 
 ## Get documentation
 Clone the [BDC website repo](https://github.com/stagecc/interim-bdc-website/tree/main) to a directory with the same parent directory as this repo.
+
 Clone the [BDC gitbook repo](https://github.com/stagecc/bdc-gitbook/tree/main) to a directory with the same parent directory as this repo.
 
 ## Copy environment variables
@@ -70,4 +71,5 @@ streamlit run client.py                             # run streamlit frontend
 >
 > - To use ${\color{orange}\text{vLLM}}$ API for chat completion, remove `parallel_tool_calls=False` from `langchain_openai\chat_models\base.py`
 > - Chroma DB initialization might quit without error or warning, might be caused by compatibility issue with Windows.
+
 
