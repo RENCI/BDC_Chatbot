@@ -38,10 +38,8 @@ bot_icon = "static/bot-32x32.png"
 user_icon = "static/user-32x32.png"
 
 # Set the server to use, local or remote
-if use_remote_server:
-    default_rag_chain = RemoteRunnable(url="https://bdcbot-s.apps.renci.org/bdc-bot")
-else:
-    default_rag_chain = RemoteRunnable(url="http://localhost:8000/bdc-bot")
+runnable_url = "https://bdcbot-s.apps.renci.org/bdc-bot" if use_remote_server else "http://localhost:8000/bdc-bot"
+default_rag_chain = RemoteRunnable(url=runnable_url)
 
 # Dict for source document types
 doc_type_dict = defaultdict(lambda: "Source")
@@ -55,12 +53,12 @@ doc_type_dict["video"] = "BDC Video"
 # Initialize D3 graph for knowledge graph visualization
 d3 = d3graph(support=None)
 
-def filter_sources(docs):
+def filter_sources(docs, max_sources=5):    
+    # Just returning top max_sources for now
+    return docs[0:max_sources]
+
     # Split by the maximum distance between scores
     # XXX: Could use something more sophisticated such as Otsu thresholding...
-    
-    # Just returning all for now
-    return docs
     
     # sort docs by score
     docs.sort(key=lambda x: x["metadata"]["score"], reverse=True)
@@ -92,6 +90,7 @@ def parse_bdc_context(context):
     top_docs = filter_sources(docs)
     
     sources = []  
+    index = 0
     for doc in top_docs:
         url = ""
 
@@ -105,6 +104,7 @@ def parse_bdc_context(context):
         
         if not any(source.get("url") == url for source in sources):
             source = {
+                "index": index,
                 "url": url,
                 "doc_type": doc["metadata"]["doc_type"],    
                 "metadata": doc["metadata"],
@@ -112,6 +112,7 @@ def parse_bdc_context(context):
                 "retriever_type": doc["metadata"].get("retriever_type", None),
                 "score": doc["metadata"].get("score", None)
             }
+            index += 1
             
             if "title" in doc["metadata"]:
                 source["title"] = doc["metadata"]["title"]
@@ -313,7 +314,8 @@ def response_type_icon(response_type):
 
 # Get response text
 def get_response_text(response, key, missing_text):
-    return response[key] if response.get(key, None) else missing_text
+    # XXX: Removing markdown code blocks for now, but this should be handle by the server
+    return response[key].replace("```", "") if response.get(key, None) else missing_text
 
 
 # Display a question and response 
@@ -329,6 +331,8 @@ def display_response(response, showBDCSources=False):
     if "bdc_response" in keys:        
         st.markdown(f"{get_response_text(response, "bdc_response", "Missing BDCBot response")}")
         context = response.get("bdc_context", [])
+        if ("dug_response" in keys):
+            st.markdown("*Open the DugBot response below for more detailed information on studies and datasets.*")
         draw_sources(parse_bdc_context(context), showBDCSources)
     if "dug_response" in keys:
         dug_kg = response.get("dug_context", {}).get("knowledge_graph", None)
