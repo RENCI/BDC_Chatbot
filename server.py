@@ -37,13 +37,20 @@ def init_vars(retriever_top_k = 5, default_rag_filter = None, rerank_top_k = 5):
     else:
         compressor = None
     
+    # TODO: hardcoded
+    code_vectorstore = Chroma(persist_directory="./.chroma_db_code_doc/",
+                        embedding_function=emb,
+                        collection_name="code_doc")
     
-    return llm, guardian_llm, dugbot_chain, emb, vectorstore, default_retriever, retriever_top_k, compressor
+    
+    
+    
+    return llm, guardian_llm, dugbot_chain, emb, vectorstore, default_retriever, retriever_top_k, compressor, code_vectorstore
 
-llm, guardian_llm, dugbot_chain, emb, vectorstore, default_retriever, retriever_top_k, compressor = init_vars(retriever_top_k=20, 
+llm, guardian_llm, dugbot_chain, emb, vectorstore, default_retriever, retriever_top_k, compressor, code_vectorstore = init_vars(retriever_top_k=20, 
                                                                                   rerank_top_k=10)
 
-bdcbot_chain = create_main_chain(default_retriever, llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True, dugbot_chain=dugbot_chain)
+bdcbot_chain = create_main_chain(default_retriever, llm, emb, vectorstore, retriever_top_k=retriever_top_k, score_threshold=0.5, compressor=compressor, hybrid_retriever=True, dugbot_chain=dugbot_chain, code_vectorstore=code_vectorstore, code_retriever=None)
 
 print("bdcbot_chain:", bdcbot_chain)
 print("dugbot_chain:", dugbot_chain)
