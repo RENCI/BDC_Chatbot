@@ -42,10 +42,11 @@ def get_ipynb_files(root_dir):
 ipynb_file_paths = get_ipynb_files(Path(code_root)/code_lang)
 # ipynb_file_paths = get_ipynb_files(f"{code_root}/{code_lang}")
 
+print(f"number of ipynb files: {len(ipynb_file_paths)}")
 
-print(ipynb_file_paths[1])
-with open(ipynb_file_paths[1], 'r') as f:
-    ipynb_data = json.load(f)
+# print(ipynb_file_paths[1])
+# with open(ipynb_file_paths[1], 'r') as f:
+#     ipynb_data = json.load(f)
 
 # pprint(ipynb_data)
 
@@ -63,7 +64,7 @@ def ipynb_to_markdown(ipynb_data, code_lang="python"):
             md_lines.append("```\n\n")
     return "".join(md_lines)
 
-md_content = ipynb_to_markdown(ipynb_data, code_lang)
+# md_content = ipynb_to_markdown(ipynb_data, code_lang)
 
 def load_ipynb_as_md(file_path, code_lang="python"):
     with open(file_path, 'r') as f:
@@ -232,11 +233,11 @@ for i, chunk_content in enumerate(all_chunks_content):
     all_chunks_content[i] = re.sub(r'```.*?```', '</code block>', all_chunks_content[2], flags=re.DOTALL)
     # use regex to find code samples (can be multiple)
     all_chunks_metadata[i]["code_sample"] = re.findall(r'```.*?```', chunk_content, flags=re.DOTALL)
-    all_rephrased_chunks.append(f"{all_chunks_context[i]}\n\n{chunk_content}")
-    
+    # all_rephrased_chunks.append(f"{all_chunks_context[i]}\n\n{chunk_content}")
+    all_rephrased_chunks.append(all_chunks_content[i])
 
 # save all_chunks_content and all_chunks_metadata to pkl, as list of dicts
-data = [{"content": content, "metadata": metadata} for content, metadata in zip(all_chunks_content, all_chunks_metadata)]
+data = [{"content": content, "metadata": metadata} for content, metadata in zip(all_rephrased_chunks, all_chunks_metadata)]
 
 with open(f"{root_dir}code.pkl", 'wb') as f:
     pickle.dump(data, f)
