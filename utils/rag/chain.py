@@ -689,11 +689,14 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
 
         code_documents = [Document(page_content=doc, metadata=meta) for doc, meta in zip(code_vectorstore.get()["documents"], code_vectorstore.get()["metadatas"])]
 
-        # TODO: add similarity score to metadata
-        code_bm25_retriever = BM25RetrieverWithScore.from_documents(documents = code_documents, 
+        if return_similarity_score:
+            code_bm25_retriever = BM25RetrieverWithScore.from_documents(documents = code_documents, 
                                                         k=code_retriever_top_k-code_emb_retriever_top_k, 
                                                         preprocess_func=word_tokenize, emb=emb)
-
+        else:
+            code_bm25_retriever = BM25Retriever.from_documents(documents = code_documents, 
+                                                        k=code_retriever_top_k-code_emb_retriever_top_k, 
+                                                        preprocess_func=word_tokenize)
 
         main_code_retriever = EnsembleRetriever(
             retrievers=[code_vs_retriever, code_bm25_retriever],
