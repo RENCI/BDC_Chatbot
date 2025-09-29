@@ -296,7 +296,7 @@ def parse_gdrive_srt_with_metadata(
     return text_list, metadata_list
 
 
-def proc_BDC_vids_Google_Sheet(url: str, method: str = 'html', transcript_col: str = 'Transcript (with timestamps)'):
+def proc_BDC_vids_Google_Sheet(url: str, method: str = 'html', transcript_col: str = 'Transcript (with timestamps)', save_df: bool = False, save_path: str = None):
     # Read the Google Sheet
     # sheet_url = "https://docs.google.com/spreadsheets/d/1vUVMffOGz3Eggu4RjZSjSRToQ3Ydc2uHxCjSDdOpvug/edit?gid=397146063#gid=397146063"
     
@@ -317,6 +317,13 @@ def proc_BDC_vids_Google_Sheet(url: str, method: str = 'html', transcript_col: s
             # Filter out header rows (rows where the first column contains "Name" or similar)
             df = df[~df.iloc[:, 0].str.contains('Name|name', na=False)]
             df = df.reset_index(drop=True)
+            
+            
+            if save_df and save_path is not None:
+                df.to_csv(f"{save_path}bdc_vids_df.csv")
+            
+            
+            
             
             for idx, row in tqdm(df.iterrows(), total=len(df)):
                 gdrive_url = row[transcript_col]

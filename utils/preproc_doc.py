@@ -222,7 +222,7 @@ for i, chunk in tqdm(enumerate(content_list), desc="Contextualizing chunks", tot
 
 # region: process videos
 print("Processing videos...")
-all_text, all_metadata = proc_BDC_vids_Google_Sheet(url="https://docs.google.com/spreadsheets/d/1vUVMffOGz3Eggu4RjZSjSRToQ3Ydc2uHxCjSDdOpvug/edit?gid=397146063#gid=397146063")
+all_text, all_metadata = proc_BDC_vids_Google_Sheet(url="https://docs.google.com/spreadsheets/d/1vUVMffOGz3Eggu4RjZSjSRToQ3Ydc2uHxCjSDdOpvug/edit?gid=397146063#gid=397146063", save_df=True, save_path=save_dir)
 
 
 vids_data = []
@@ -230,6 +230,10 @@ vids_data = []
 for i in tqdm(range(len(all_text))):
     for j in range(len(all_text[i])):
         contextualized_chunk = contextualize_chunk(llm, all_text[i][j], whole_document=all_metadata[i][j]['summary'], is_doc_summary=True)
+        
+        # add title to chunck
+        contextualized_chunk = f"Title: {all_metadata[i][j]['title']}\n\nContext: {contextualized_chunk}"
+        
         temp_metadata = all_metadata[i][j].copy()
         temp_metadata['content'] = all_text[i][j]
         temp_metadata['timestamp_url'] = "https://youtu.be/" + re.search(r'v=([^&]+)', temp_metadata['video_url']).group(1) + f"?t={int(temp_metadata['start_seconds'])}"

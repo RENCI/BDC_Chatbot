@@ -65,12 +65,14 @@ def create_chroma_client(docs_path, db_path = ".chroma_db/", emb = None, llm = N
     
     i = 1
     for file_name, doc_type in zip(file_name_list, doc_type_list):
+        temp_time = time.time()
         print(i, "/", len(file_name_list), "Processing ", doc_type)
         page_contents, metadata, embeddings = loadPKL(os.path.join(docs_path, file_name), doc_type, emb, llm, use_summary)
         all_contents.extend(page_contents)
         all_metadatas.extend(metadata)
         all_embeddings.extend(embeddings)
         i += 1
+        print(f"{doc_type} time taken: {round((time.time() - temp_time)/60, 1)} minutes")
         
     for metadata in all_metadatas:
         if len(metadata) == 0:
@@ -83,7 +85,7 @@ def create_chroma_client(docs_path, db_path = ".chroma_db/", emb = None, llm = N
     collection.add(ids=all_ids, documents=all_contents, embeddings=all_embeddings, metadatas=all_metadatas)
     
     end_time = time.time()
-    print("Time taken: ", end_time - start_time, " seconds")
+    print("Time taken: ", round((end_time - start_time)/60, 1), " minutes")
     
     return persistent_client
 

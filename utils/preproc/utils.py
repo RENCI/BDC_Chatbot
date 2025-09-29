@@ -82,7 +82,7 @@ def contextualize_chunk(llm, chunk_content: str, whole_document: str = None, met
         chain = create_chunk_contextualizer_chain(llm, use_metadata_context=True, is_doc_summary=is_doc_summary)
     else:
         context = whole_document
-        chain = create_chunk_contextualizer_chain(llm, use_metadata_context=False)
+        chain = create_chunk_contextualizer_chain(llm, use_metadata_context=False, is_doc_summary=is_doc_summary)
     
     # chain = create_chunk_contextualizer_chain(llm, use_metadata_context=metadata_context is not None)
     

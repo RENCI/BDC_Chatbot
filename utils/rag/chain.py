@@ -20,7 +20,7 @@ from langchain_core.documents import Document
 
 
 from pydantic import BaseModel, Field, model_validator, field_validator
-from typing import Any, Dict, ClassVar, Set, List, Iterable, Optional
+from typing import Any, Dict, ClassVar, Set, List, Iterable, Optional, Literal
 
 
 from datetime import datetime, timedelta, date
@@ -48,9 +48,12 @@ from langchain.retrievers import EnsembleRetriever
 from sklearn.metrics.pairwise import cosine_similarity
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 
+from langchain.retrievers import EnsembleRetriever
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import DocumentCompressorPipeline, LLMListwiseRerank, LLMChainFilter
+from langchain_community.document_transformers import EmbeddingsRedundantFilter
 
 
-from typing import Literal
 import re
 
 from nltk.tokenize import word_tokenize
@@ -311,13 +314,21 @@ def create_topic_classifier_chain(topics: List[str], llm):
     classifier_prompt = ChatPromptTemplate.from_messages([
         ("system", f"""You are a topic classifier. Given a user query, determine if it's related to any of the following topics: {topic_list}.
 If the query clearly relates to one or more of these topics, return ONLY a comma-separated list of topic names from the list.
-If it doesn't clearly match any topic, return ONLY "other".
+If the query clearly relates to one or more of these topics, return ONLY a comma-separated list of topic names from the list.
+If it doesn't clearly match any topic, return ONLY "- other".
 Return ONLY the topic name(s) from the list, or "other" with no additional text or explanation.
-The response can ONLY be a markdown list of topic names ("- topic1 \\n- topic2") from the list or "- other". Always use "- " for the list prefix even when the length is 1. """),
+The response can ONLY be a markdown list of topic names ("- topic1 \\n- topic2") from the list or "- other". You MUST use, the hyphen prefix, "- " for the list prefix even when only one topic is returned. """),
         ("human", "{input}")
     ])
 
+    # def parse_topics(x):
+    #     # Accepts a string like "topic1,topic2" or "other"
+    #     x = proc_response_pydantic_enum(x)
+    #     if x == "other":
+    #         return ["other"]
+    #     return [t.strip() for t in x.split(",") if t.strip()]
 
+    
     def topics_wrapper(x):
         if len(x) == 0:
             return {"topic": ["other"]}
@@ -494,7 +505,7 @@ def create_bdc_response_llm_chain(llm):
 
 
 class QueryType(BaseModel):
-    category: Literal["bdc", "dug", "both", "na"]
+    category: Literal["coding", "bdc", "dug", "both", "na"]
 
     @model_validator(mode='before')
     @classmethod
@@ -504,7 +515,7 @@ class QueryType(BaseModel):
         
         if value not in cls.category:
             raise ValueError("Category must be one of: " + repr(cls.category) + " (got " + value + ")")
-        
+        print("query category: ", value)
         return {"category": value}
 
 def create_query_classifier_chain(llm):
@@ -515,18 +526,20 @@ def create_query_classifier_chain(llm):
         Given a user query, determine if it's about:
         1. General knowledge about the BDC (return "bdc")
         2. Biomedical data or studies (return "dug")
-        3. Availability of data  (return "both")
-        4. If you can't clearly determine (return "na")
+        3. Availability of data or studies (return "both")
+        4. Coding/programming questions, especially when programming language is mentioned (return "coding")
+        5. If you can't clearly determine (return "na")
         
         Examples:
         - "How do I get started with BDC?" -> "bdc"
         - "What studies have data on heart failure?" -> "dug"
         - "Is cancer data available in BDC?" -> "both"
+        - "How do I access variables using R PIC-SURE API?" -> "coding"
         - "What's the weather like?" -> "na"
         
         Note:
         Do not return "dug", if the user query contains not biomedical terms. 
-        MUST return ONLY one of these four values: "bdc", "dug", "both", or "na"
+        MUST return ONLY one of these four values: "bdc", "dug", "both", "coding", or "na"
         Return the category name only, no other text or explanation."""),
         ("human", "{input}")
     ])
@@ -543,14 +556,75 @@ def create_query_classifier_chain(llm):
     )
 
 
+def create_coding_response_chain(llm, code_retriever): # compression_retriever
+    contextualize_q_system_prompt = """You are an assistant, called "BDC Bot", for question-answering tasks related to NHLBI BioData Catalyst®️. \
+    Given a chat history and the latest user question \
+    which might reference context in the chat history, formulate a standalone question \
+    which can be understood without the chat history. Replace "NHLBI BioData Catalyst®️", "BioData Catalyst", or any short form of it in user input with "BDC". \
+    Do NOT answer the question, just reformulate it if needed and otherwise return it as is."""
+    contextualize_q_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", contextualize_q_system_prompt),
+            # MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+
+    history_aware_retriever = create_history_aware_retriever(
+        llm, code_retriever, contextualize_q_prompt
+    )
+
+    qa_system_prompt = """Use the following pieces of retrieved markdown to answer the question. \
+    If you can't get an answer base on the context, just say that you don't know. \
+    Keep the answer concise, prioritize using 1 short paragraph, and include the most relevant information, unless a lengthier answer is required to answer the question or otherwise specified. \
+    The code blocks in the markdown has been remove and do not insert any code in your response. I'll add the code after your response manually, adjust your response for a smooth transition. \
+
+    ### context: {context}"""
+
+    qa_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", qa_system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+
+
+    question_answer_chain = create_stuff_documents_chain(llm, qa_prompt).with_config({"run_name": "coding_question_answer_chain"})
+
+
+    rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain).with_config({"run_name": "coding_rag_chain"})
+    
+    
+    rag_chain = rag_chain | RunnableLambda(lambda y: {
+                "code_response": y.get("answer"),
+                # "bdc_context": document_to_dict(y.get("context"), key="bdc_context"),
+                "code_context": document_to_dict(y.get("context")),
+            })
+    
+    
+    
+    def debug_chain(x):
+        print("debug_chain: code rag input")
+        print(x)
+        return x
+    
+    
+    
+    return RunnableLambda(debug_chain) | rag_chain
 
 
 
 
 
 
-
-def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False, dugbot_chain=None, return_similarity_score=False):
+def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retriever_top_k=5, score_threshold=0.5, compressor=None, hybrid_retriever=False, dugbot_chain=None, code_vectorstore = None, code_retriever=None, return_similarity_score=False):
+    
+    if code_vectorstore:
+        print(f"code vectorstore length: {len(code_vectorstore.get()['documents'])}")
+    if vectorstore:
+        print(f"doc vectorstore length: {len(vectorstore.get()['documents'])}")
+    
     
     if hybrid_retriever:
         emb_retriever_top_k = retriever_top_k//2
@@ -600,10 +674,54 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
     # region: create chains
     rag_chain = create_qa_rag_chain(retriever, llm)
     
+    
+    if code_vectorstore is not None and code_retriever is None:
+        print("using code vectorstore for code retriever")
+        code_retriever_top_k = 10
+        code_emb_retriever_top_k = code_retriever_top_k//2
 
+        if return_similarity_score:
+            code_vs_retriever = VectorStoreRetrieverWithScore(code_vectorstore, search_kwargs={'k':code_emb_retriever_top_k})
+        else:
+            code_vs_retriever = VectorStoreRetriever(vectorstore=code_vectorstore, search_kwargs={'k':code_emb_retriever_top_k})
+
+        
+
+        code_documents = [Document(page_content=doc, metadata=meta) for doc, meta in zip(code_vectorstore.get()["documents"], code_vectorstore.get()["metadatas"])]
+
+        # TODO: add similarity score to metadata
+        code_bm25_retriever = BM25RetrieverWithScore.from_documents(documents = code_documents, 
+                                                        k=code_retriever_top_k-code_emb_retriever_top_k, 
+                                                        preprocess_func=word_tokenize, emb=emb)
+
+
+        main_code_retriever = EnsembleRetriever(
+            retrievers=[code_vs_retriever, code_bm25_retriever],
+            weights=[0.5, 0.5]
+        )
+
+        LW_reranker = LLMListwiseRerank.from_llm(llm, top_n=3)
+        LLM_filter = LLMChainFilter.from_llm(llm)
+        redundant_filter = EmbeddingsRedundantFilter(embeddings=emb)
+        pipeline_compressor = DocumentCompressorPipeline(
+            transformers=[redundant_filter, LW_reranker, LLM_filter]
+        )
+
+        code_retriever = ContextualCompressionRetriever(
+            base_compressor=pipeline_compressor, base_retriever=main_code_retriever
+        )
+    # if no vectorstore is provided, use the code_retriever
+    # else:
+    #     code_retriever = None
+        
+        
+        
+        
+        
     
     
     if dugbot_chain is not None:
+        print("using dugbot chain in router")
         query_classifier_chain = create_query_classifier_chain(llm)
         dug_response_chain = create_dug_response_chain(dugbot_chain, llm)
         is_dugbot_exist = True
@@ -658,7 +776,7 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
             "bdc_context": x["bdc_result"].get("bdc_context"),
             "dug_response": x["dug_result"].get("dug_response"),
             "dug_context": x["dug_result"].get("dug_context"),
-        })
+        }).with_config({"run_name": "bdc_dug_parallel_chain"})
         
         fallback_bdc_chain = bdc_response_chain | RunnableLambda(
             lambda x: {
@@ -666,7 +784,7 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
                 "dug_response": "",
                 "dug_context": {"error": "DUG Bot is currently unavailable or encountered an error."}
             }
-        )
+        ).with_config({"run_name": "fallback_bdc_chain"})
         
         
         bdc_dug_rephrase_prompt = ChatPromptTemplate.from_messages([
@@ -687,21 +805,36 @@ def create_main_chain(retriever, llm, emb, vectorstore: VectorStore = None, retr
             """)
         ])
         
-        bdc_dug_rephrase_chain = bdc_dug_rephrase_prompt | llm | StrOutputParser()
+        bdc_dug_rephrase_chain = bdc_dug_rephrase_prompt | llm | StrOutputParser().with_config({"run_name": "bdc_dug_rephrase_chain"})
     
         
-        
-        
-        
-        agents_branch = RunnableBranch(
-            (lambda x: x["query_category"] == "bdc" or x["query_category"] == "na", bdc_response_chain),
-            (lambda x: x["query_category"] == "dug", dug_response_chain.with_fallbacks([fallback_bdc_chain])),
-            (lambda x: x["query_category"] == "both", (both_parallel_chain 
-                                                       |RunnablePassthrough.assign(
-                                                           combined_response=bdc_dug_rephrase_chain
-        )).with_fallbacks([fallback_bdc_chain])),
-            bdc_response_chain  # default fallback
-        )
+        if code_retriever is not None:
+            print("using code retriever in router")
+            coding_response_chain = create_coding_response_chain(llm, code_retriever).with_config({"run_name": "coding_response_chain"})
+            
+            
+            
+            agents_branch = RunnableBranch(
+                (lambda x: x["query_category"] == "bdc" or x["query_category"] == "na", bdc_response_chain),
+                (lambda x: x["query_category"] == "dug", dug_response_chain.with_fallbacks([fallback_bdc_chain])),
+                (lambda x: x["query_category"] == "both", (both_parallel_chain 
+                                                        |RunnablePassthrough.assign(
+                                                            combined_response=bdc_dug_rephrase_chain
+            )).with_fallbacks([fallback_bdc_chain])),
+                (lambda x: x["query_category"] == "coding", coding_response_chain),
+                bdc_response_chain  # default fallback
+            ).with_config({"run_name": "agents_branch_with_code_retriever"})
+        else:
+            coding_response_chain = None
+            agents_branch = RunnableBranch(
+                (lambda x: x["query_category"] == "bdc" or x["query_category"] == "na", bdc_response_chain),
+                (lambda x: x["query_category"] == "dug", dug_response_chain.with_fallbacks([fallback_bdc_chain])),
+                (lambda x: x["query_category"] == "both", (both_parallel_chain 
+                                                        |RunnablePassthrough.assign(
+                                                            combined_response=bdc_dug_rephrase_chain
+            )).with_fallbacks([fallback_bdc_chain])),
+                bdc_response_chain  # default fallback
+            ).with_config({"run_name": "agents_branch_without_code_retriever"})
         
         
         
