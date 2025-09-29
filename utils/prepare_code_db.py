@@ -230,7 +230,7 @@ all_rephrased_chunks = []
 # add code sample to metadata
 for i, chunk_content in enumerate(all_chunks_content):
     all_chunks_metadata[i]["original"] = chunk_content
-    all_chunks_content[i] = re.sub(r'```.*?```', '</code block>', all_chunks_content[2], flags=re.DOTALL)
+    all_chunks_content[i] = re.sub(r'```.*?```', '</code block>', all_chunks_content[i], flags=re.DOTALL)
     # use regex to find code samples (can be multiple), concat with new line
     all_chunks_metadata[i]["code_sample"] = "\n".join(re.findall(r'```.*?```', chunk_content, flags=re.DOTALL))
     # all_rephrased_chunks.append(f"{all_chunks_context[i]}\n\n{chunk_content}")
