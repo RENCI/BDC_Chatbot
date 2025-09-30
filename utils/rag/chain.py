@@ -414,7 +414,7 @@ You can use bullet points and markdown formatting if either is needed.\
 The context are retrieved based on the user query and the chat history.\
 If there is context provided, answer the question based on the context.\
 Use the term 'documentation' instead of context in your repsponses.\
-DO NOT USE "NHLBI BioData Catalyst®️" or any short form of it. You MUST ONLY refer it as ```BDC``` in your responses, even if the user query is not refering it as BDC.\
+DO NOT USE "NHLBI BioData Catalyst®️" or any short form of it. You MUST ONLY refer it as "BDC" in your responses, even if the user query is not refering it as BDC.\
 
 ### context: {context}"""
     
