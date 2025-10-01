@@ -351,8 +351,6 @@ def display_response(response, showBDCSources=False):
             "code_sample": "```python\n# Install packages\nimport sys\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n# BDC Powered by Terra users uncomment the following line to specify package install location\n# sys.path.insert(0, r\"/home/jupyter/.local/lib/python3.7/site-packages\")\n```\n```python\n# Install PIC-SURE packages\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-client.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-adapter-hpds.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-biodatacatalyst-python-adapter-hpds.git\n```\n```python\nimport PicSureClient\nimport PicSureBdcAdapter\n```"
         }
 
-
-
         # Full URL should be returned by the server
         code_base_url = "https://github.com/hms-dbmi/Access-to-Data-using-PIC-SURE-API/blob/master/"
         source_offset = len("../Access-to-Data-using-PIC-SURE-API/")
@@ -362,7 +360,7 @@ def display_response(response, showBDCSources=False):
         with st.expander("Sample code", expanded=False):
             st.markdown(f"##### [{context["title"]}]({code_base_url}{context["source"][source_offset:]})")
             st.markdown(f"{context["original"]}")
-            st.code(context["code_sample"])
+            #st.code(context["code_sample"])
 
 with st.chat_message("bdc-assistant"):
     st.markdown(greeting)
