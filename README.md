@@ -30,8 +30,9 @@ Edit `.env` to match
 ## Create RAG database
 
 ```bash
-python -m utils.preproc_doc                 # preprocess BDC website repo
+python -m utils.preproc_doc                         # preprocess BDC website repo
 python -m utils.prepare_chromadb                    # create chroma db
+python -m utils.prepare_code_db                     # create chroma db for code samples
 ```
 
 ## Run chatbot
