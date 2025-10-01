@@ -222,6 +222,7 @@ def process_kg(kg):
 def draw_dug_response(response, response_title, show_response, kg=None):
     with st.expander(f":material/find_in_page: {response_title}", expanded=show_response):
         st.markdown(response)
+        #st.markdown("*Powered by DugBot* [:material/launch:](https://search-dev.biodatacatalyst.renci.org/chat-v2/)")
 
         if kg is not None:
             adjmat, df = process_kg(kg)
@@ -349,10 +350,10 @@ def display_response(response, showBDCSources=False):
         st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}")
         for context in response.get("code_context", []):
             metadata = context.model_dump()["metadata"]
-            
+
             with st.expander(f":material/code: Sample code &mdash; {metadata['title']}", expanded=False):
                 st.markdown(f"{metadata['original']}")
-                st.markdown(f"Go to code repository [:material/launch:]({code_base_url}{metadata['source'][source_offset:]})")
+                st.markdown(f"\n---\n*Visit code repository* [:material/launch:]({code_base_url}{metadata['source'][source_offset:]})")
 
 with st.chat_message("bdc-assistant"):
     st.markdown(greeting)
