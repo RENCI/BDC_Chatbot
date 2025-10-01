@@ -146,7 +146,7 @@ doc_type_order = [
 def draw_sources(sources, showSources):
     if not sources:
         return
-    with st.expander(f"Source{"s" if len(sources) > 1 else ""}", expanded=showSources):
+    with st.expander(f":material/source: Source{"s" if len(sources) > 1 else ""}", expanded=showSources):
         # Group sources by doc_type using source_order
         grouped_sources = {doc_type: [] for doc_type in doc_type_order}
         for source in sources:
@@ -220,7 +220,7 @@ def process_kg(kg):
 
 
 def draw_additional_response(response, response_title, show_response, kg=None):
-    with st.expander(response_title, expanded=show_response):
+    with st.expander(f":material/find_in_page: {response_title}", expanded=show_response):
         st.markdown(response)
 
         if kg is not None:
@@ -342,25 +342,19 @@ def display_response(response, showBDCSources=False):
     #if response.get("combined_response", None):
     #    st.markdown(response["combined_response"])
     if "code_response" in keys:
-        response["code_context"] = {
-            "source": "../Access-to-Data-using-PIC-SURE-API/NHLBI_BioData_Catalyst/python/8_RECOVER.ipynb",
-            "file_name": "8_RECOVER.ipynb",
-            "hierarchy": "Exploring the RECOVER Adult Cohort on BioData Catalyst, Set Up, Install packages",
-            "title": "Install packages",
-            "original": "The first step to using the PIC-SURE API is to install the packages needed. The following code installs the PIC-SURE API components from GitHub, specifically:\n* PIC-SURE Client\n* PIC-SURE Adapter\n* *BDC-PIC-SURE* Adapter\n\n**Note that if you are using the dedicated PIC-SURE environment within the *BDC Powered by Seven Bridges* platform, the necessary packages have already been installed.**\n\n```python\n# Install packages\nimport sys\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n# BDC Powered by Terra users uncomment the following line to specify package install location\n# sys.path.insert(0, r\"/home/jupyter/.local/lib/python3.7/site-packages\")\n```\n\n```python\n# Install PIC-SURE packages\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-client.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-adapter-hpds.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-biodatacatalyst-python-adapter-hpds.git\n```\n\n```python\nimport PicSureClient\nimport PicSureBdcAdapter\n```",
-            "code_sample": "```python\n# Install packages\nimport sys\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n# BDC Powered by Terra users uncomment the following line to specify package install location\n# sys.path.insert(0, r\"/home/jupyter/.local/lib/python3.7/site-packages\")\n```\n```python\n# Install PIC-SURE packages\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-client.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-adapter-hpds.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-biodatacatalyst-python-adapter-hpds.git\n```\n```python\nimport PicSureClient\nimport PicSureBdcAdapter\n```"
-        }
-
         # Full URL should be returned by the server
         code_base_url = "https://github.com/hms-dbmi/Access-to-Data-using-PIC-SURE-API/blob/master/"
         source_offset = len("../Access-to-Data-using-PIC-SURE-API/")
 
-        context = response.get("code_context", {})
+        st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}")
+        for context in response.get("code_context", []):
+            metadata = context.model_dump()["metadata"]
 
-        with st.expander("Sample code", expanded=False):
-            st.markdown(f"##### [{context["title"]}]({code_base_url}{context["source"][source_offset:]})")
-            st.markdown(f"{context["original"]}")
-            #st.code(context["code_sample"])
+            print("metadata keys:", metadata.keys())
+
+            with st.expander(f":material/code: Sample code &mdash; {metadata['title']}", expanded=False):
+                st.markdown(f"{metadata['original']}")
+                st.markdown(f"Go to code repository [:material/launch:]({code_base_url}{metadata['source'][source_offset:]})")
 
 with st.chat_message("bdc-assistant"):
     st.markdown(greeting)
@@ -419,24 +413,6 @@ if prompt := (st.chat_input("Ask a question") or st.session_state["sample_prompt
         with st.spinner("Generating response...", show_time=show_timer):            
             # Get response from server
             response = current_chain.invoke({"input": prompt, "chat_history": st.session_state["chat_history"]})
-
-            # XXX: Just for testing code samples
-            response["code_response"] = """
-The first step to using the PIC-SURE API is to install the packages needed. The following code installs the PIC-SURE API components from GitHub, specifically:
-* PIC-SURE Client
-* PIC-SURE Adapter
-* BDC-PIC-SURE Adapter
-Note that if you are using the dedicated PIC-SURE environment within the BDC Powered by Seven Bridges platform, the necessary packages have already been installed.
-"""        
-
-            response["code_context"] = {
-                "source": "../Access-to-Data-using-PIC-SURE-API/NHLBI_BioData_Catalyst/python/8_RECOVER.ipynb",
-                "file_name": "8_RECOVER.ipynb",
-                "hierarchy": "Exploring the RECOVER Adult Cohort on BioData Catalyst, Set Up, Install packages",
-                "title": "Install packages",
-                "original": "The first step to using the PIC-SURE API is to install the packages needed. The following code installs the PIC-SURE API components from GitHub, specifically:\n* PIC-SURE Client\n* PIC-SURE Adapter\n* *BDC-PIC-SURE* Adapter\n\n**Note that if you are using the dedicated PIC-SURE environment within the *BDC Powered by Seven Bridges* platform, the necessary packages have already been installed.**\n\n```python\n# Install packages\nimport sys\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n# BDC Powered by Terra users uncomment the following line to specify package install location\n# sys.path.insert(0, r\"/home/jupyter/.local/lib/python3.7/site-packages\")\n```\n\n```python\n# Install PIC-SURE packages\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-client.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-adapter-hpds.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-biodatacatalyst-python-adapter-hpds.git\n```\n\n```python\nimport PicSureClient\nimport PicSureBdcAdapter\n```",
-                "code_sample": "```python\n# Install packages\nimport sys\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n# BDC Powered by Terra users uncomment the following line to specify package install location\n# sys.path.insert(0, r\"/home/jupyter/.local/lib/python3.7/site-packages\")\n```\n```python\n# Install PIC-SURE packages\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-client.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-python-adapter-hpds.git\n!{sys.executable} -m pip install --upgrade --force-reinstall git+https://github.com/hms-dbmi/pic-sure-biodatacatalyst-python-adapter-hpds.git\n```\n```python\nimport PicSureClient\nimport PicSureBdcAdapter\n```"
-            }
             
         display_response(response)
         
