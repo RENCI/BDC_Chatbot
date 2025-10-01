@@ -219,7 +219,7 @@ def process_kg(kg):
     return adjmat, df
 
 
-def draw_additional_response(response, response_title, show_response, kg=None):
+def draw_dug_response(response, response_title, show_response, kg=None):
     with st.expander(f":material/find_in_page: {response_title}", expanded=show_response):
         st.markdown(response)
 
@@ -338,7 +338,7 @@ def display_response(response, showBDCSources=False):
         draw_sources(parse_bdc_context(context), showBDCSources)
     if "dug_response" in keys:
         dug_kg = response.get("dug_context", {}).get("knowledge_graph", None)
-        draw_additional_response(get_response_text(response, "dug_response", "Missing DugBot response"), "DugBot Response", False, dug_kg)
+        draw_dug_response(get_response_text(response, "dug_response", "Missing DugBot response"), "DugBot Response", False, dug_kg)
     #if response.get("combined_response", None):
     #    st.markdown(response["combined_response"])
     if "code_response" in keys:
@@ -349,9 +349,7 @@ def display_response(response, showBDCSources=False):
         st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}")
         for context in response.get("code_context", []):
             metadata = context.model_dump()["metadata"]
-
-            print("metadata keys:", metadata.keys())
-
+            
             with st.expander(f":material/code: Sample code &mdash; {metadata['title']}", expanded=False):
                 st.markdown(f"{metadata['original']}")
                 st.markdown(f"Go to code repository [:material/launch:]({code_base_url}{metadata['source'][source_offset:]})")
