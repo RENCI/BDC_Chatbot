@@ -1,3 +1,4 @@
+from matplotlib.pylab import source
 import streamlit as st
 from langchain_core.messages import HumanMessage, AIMessage
 from collections import defaultdict
@@ -334,8 +335,6 @@ def display_response(response, showBDCSources=False):
         context = response.get("bdc_context", [])
         if ("dug_response" in keys):
             st.markdown("*Open the DugBot response below for more detailed information on studies and datasets.*")
-        if ("code_response" in keys):
-            st.markdown("*Open the Sample code below to see some related sample code.*")
         draw_sources(parse_bdc_context(context), showBDCSources)
     if "dug_response" in keys:
         dug_kg = response.get("dug_context", {}).get("knowledge_graph", None)
@@ -347,13 +346,42 @@ def display_response(response, showBDCSources=False):
         code_base_url = "https://github.com/hms-dbmi/Access-to-Data-using-PIC-SURE-API/blob/master/"
         source_offset = len("../Access-to-Data-using-PIC-SURE-API/")
 
-        st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}")
-        for context in response.get("code_context", []):
-            metadata = context.model_dump()["metadata"]
+        context = response.get("code_context", [])
 
-            with st.expander(f":material/code: Sample code &mdash; {metadata['title']}", expanded=False):
-                st.markdown(f"{metadata['original']}")
-                st.markdown(f"\n---\n*Visit code repository* [:material/launch:]({code_base_url}{metadata['source'][source_offset:]})")
+        # Get the context in the correct format
+        code_blocks = []  
+        for code_block in context:
+            code_blocks.append(code_block.model_dump().get("metadata", {})) 
+
+        # Group by file name
+        file_names = []
+        for code_block in code_blocks:
+            file_name = code_block.get("file_name", "unknown_file")
+            if file_name not in file_names:
+                file_names.append(file_name)
+
+        grouped_blocks = []
+
+        for code_block in code_blocks:
+            found = False
+            for group in grouped_blocks:
+                if group["file_name"] == code_block.get("file_name", "unknown_file"):
+                    group["code_blocks"].append(code_block)
+                    found = True
+                    break
+
+            if not found:
+                grouped_blocks.append({"file_name": file_name, "code_blocks": [code_block]})
+
+        # Show response
+        st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}", unsafe_allow_html=True)
+        st.markdown("*View relevant code samples below*")
+        for group in grouped_blocks:
+            st.markdown(f"**{group['file_name']}** [:material/launch:]({code_base_url}{code_block['source'][source_offset:]})")
+
+            for code_block in group["code_blocks"]:
+                with st.expander(f":material/code: {code_block['title']}", expanded=False):
+                    st.markdown(f"{code_block['original']}")
 
 with st.chat_message("bdc-assistant"):
     st.markdown(greeting)
