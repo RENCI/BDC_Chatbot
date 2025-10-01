@@ -1,3 +1,4 @@
+from matplotlib.pylab import source
 import streamlit as st
 from langchain_core.messages import HumanMessage, AIMessage
 from collections import defaultdict
@@ -146,7 +147,7 @@ doc_type_order = [
 def draw_sources(sources, showSources):
     if not sources:
         return
-    with st.expander(f"Source{"s" if len(sources) > 1 else ""}", expanded=showSources):
+    with st.expander(f":material/source: Source{"s" if len(sources) > 1 else ""}", expanded=showSources):
         # Group sources by doc_type using source_order
         grouped_sources = {doc_type: [] for doc_type in doc_type_order}
         for source in sources:
@@ -219,9 +220,10 @@ def process_kg(kg):
     return adjmat, df
 
 
-def draw_additional_response(response, response_title, show_response, kg=None):
-    with st.expander(response_title, expanded=show_response):
+def draw_dug_response(response, response_title, show_response, kg=None):
+    with st.expander(f":material/find_in_page: {response_title}", expanded=show_response):
         st.markdown(response)
+        #st.markdown("*Powered by DugBot* [:material/launch:](https://search-dev.biodatacatalyst.renci.org/chat-v2/)")
 
         if kg is not None:
             adjmat, df = process_kg(kg)
@@ -336,11 +338,50 @@ def display_response(response, showBDCSources=False):
         draw_sources(parse_bdc_context(context), showBDCSources)
     if "dug_response" in keys:
         dug_kg = response.get("dug_context", {}).get("knowledge_graph", None)
-        draw_additional_response(get_response_text(response, "dug_response", "Missing DugBot response"), "DugBot Response", False, dug_kg)
+        draw_dug_response(get_response_text(response, "dug_response", "Missing DugBot response"), "DugBot Response", False, dug_kg)
     #if response.get("combined_response", None):
     #    st.markdown(response["combined_response"])
     if "code_response" in keys:
-        st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}")
+        # Full URL should be returned by the server
+        code_base_url = "https://github.com/hms-dbmi/Access-to-Data-using-PIC-SURE-API/blob/master/"
+        source_offset = len("../Access-to-Data-using-PIC-SURE-API/")
+
+        context = response.get("code_context", [])
+
+        # Get the context in the correct format
+        code_blocks = []  
+        for code_block in context:
+            code_blocks.append(code_block.model_dump().get("metadata", {})) 
+
+        # Group by file name
+        file_names = []
+        for code_block in code_blocks:
+            file_name = code_block.get("file_name", "unknown_file")
+            if file_name not in file_names:
+                file_names.append(file_name)
+
+        grouped_blocks = []
+
+        for code_block in code_blocks:
+            found = False
+            for group in grouped_blocks:
+                if group["file_name"] == code_block.get("file_name", "unknown_file"):
+                    group["code_blocks"].append(code_block)
+                    found = True
+                    break
+
+            if not found:
+                grouped_blocks.append({"file_name": file_name, "code_blocks": [code_block]})
+
+        # Show response
+        st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}", unsafe_allow_html=True)
+        st.markdown("*View relevant code samples below*")
+        for group in grouped_blocks:
+            st.markdown(f"**{group['file_name']}** [:material/launch:]({code_base_url}{code_block['source'][source_offset:]})")
+
+            for code_block in group["code_blocks"]:
+                with st.expander(f":material/code: {code_block['title']}", expanded=False):
+                    st.markdown(f"{code_block['original']}")
 
 with st.chat_message("bdc-assistant"):
     st.markdown(greeting)
@@ -399,7 +440,7 @@ if prompt := (st.chat_input("Ask a question") or st.session_state["sample_prompt
         with st.spinner("Generating response...", show_time=show_timer):            
             # Get response from server
             response = current_chain.invoke({"input": prompt, "chat_history": st.session_state["chat_history"]})
-        
+            
         display_response(response)
         
         # Create answer from response to store for chat history
