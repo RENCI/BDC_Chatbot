@@ -524,14 +524,16 @@ def create_query_classifier_chain(llm):
     classifier_prompt = ChatPromptTemplate.from_messages([
         ("system", """You are a query classifier for the BioData Catalyst (BDC) platform. 
         Given a user query, determine if it's about:
-        1. General knowledge about the BDC (return "bdc")
+        1. General knowledge about BDC (return "bdc")
         2. Biomedical data or studies (return "dug")
         3. Availability of data or studies (return "both")
         4. Coding/programming questions, especially when programming language is mentioned (return "coding")
         5. If you can't clearly determine (return "na")
         
         Examples:
-        - "How do I get started with BDC?" -> "bdc"
+        - "How do I get started with BDC?" -> "bdc"        
+        - "Can I download data from BDC?" -> "bdc"
+        - "How can I find datasets in BDC?" -> "bdc"
         - "What studies have data on heart failure?" -> "dug"
         - "Is cancer data available in BDC?" -> "both"
         - "How do I access variables using R PIC-SURE API?" -> "coding"
