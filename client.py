@@ -361,17 +361,14 @@ def display_response(response, showBDCSources=False):
                 file_names.append(file_name)
 
         grouped_blocks = []
+        for file_name in file_names:
+            grouped_blocks.append({"file_name": file_name, "code_blocks": []})
 
         for code_block in code_blocks:
-            found = False
             for group in grouped_blocks:
                 if group["file_name"] == code_block.get("file_name", "unknown_file"):
                     group["code_blocks"].append(code_block)
-                    found = True
                     break
-
-            if not found:
-                grouped_blocks.append({"file_name": file_name, "code_blocks": [code_block]})
 
         # Show response
         st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}", unsafe_allow_html=True)
