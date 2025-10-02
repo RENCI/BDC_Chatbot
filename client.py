@@ -132,7 +132,7 @@ def parse_bdc_context(context):
                 start_seconds = int(doc["metadata"]["start_seconds"])
                 minutes = start_seconds // 60
                 seconds = start_seconds % 60
-                source["title"] += f" — @{minutes}m {seconds}s"
+                source["title"] += f" @{minutes}m {seconds}s"
             
             sources.append(source)
         else:
