@@ -126,6 +126,13 @@ def parse_bdc_context(context):
                 source["title"] = doc["metadata"]["file_name"]
             else:
                 source["title"] = doc["metadata"]["file_path"]
+
+            # Add start seconds to title for videos
+            if "start_seconds" in doc["metadata"]:
+                start_seconds = int(doc["metadata"]["start_seconds"])
+                minutes = start_seconds // 60
+                seconds = start_seconds % 60
+                source["title"] += f" — timestamp {minutes}m {seconds}s"
             
             sources.append(source)
         else:
