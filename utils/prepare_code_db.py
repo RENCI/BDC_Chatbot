@@ -71,16 +71,40 @@ def load_ipynb_as_md(file_path, code_lang="python"):
         ipynb_data = json.load(f)
     return ipynb_to_markdown(ipynb_data, code_lang)
 
-def chunk_docs_md_by_headers(file_path, code_lang="python"):
+
+
+def chunk_docs_md_by_headers(file_path, code_lang="python", url_prefix=""):
     content = load_ipynb_as_md(file_path, code_lang)
     file_name = os.path.basename(file_path)
     
+    # Clean up relative path for URL
+    rel_for_url = os.path.relpath(file_path).replace(os.sep, '/')
+
+    # Remove any leading ./ or ../ patterns
+    while rel_for_url.startswith('./') or rel_for_url.startswith('../'):
+        if rel_for_url.startswith('./'):
+            rel_for_url = rel_for_url[2:]
+        elif rel_for_url.startswith('../'):
+            rel_for_url = rel_for_url[3:]
+        else:
+            break
+
+    # Add "blob/master/" after the first level
+    path_parts = rel_for_url.split('/')
+    if len(path_parts) > 1:
+        rel_for_url = f"{path_parts[0]}/blob/master/{'/'.join(path_parts[1:])}"
+
+    file_url = f"{url_prefix}{rel_for_url}" if url_prefix else ""
+    
     header_pattern = r'^(#{1,6})\s+(.+)$'
+    
+    
     chunks_content = []
     chunks_metadata = []
     current_chunk = []
     current_headers = []
     in_code_block = False
+    chunk_counter = 0
     
     code_sample = ""
     
@@ -101,12 +125,15 @@ def chunk_docs_md_by_headers(file_path, code_lang="python"):
                 if current_chunk:
                     chunk_content = '\n'.join(current_chunk).strip()
                     if chunk_content:
+                        chunk_counter += 1
                         chunks_content.append(chunk_content)
                         chunks_metadata.append({
                             "source": os.path.relpath(file_path),
                             "file_name": file_name,  
                             "hierarchy": ", ".join(current_headers),
-                            "title": current_headers[-1]
+                            "title": current_headers[-1],
+                            "url": file_url,
+                            "chunk_number": chunk_counter
                         })
                 # Start new chunk (without including the header line)
                 current_chunk = []
@@ -121,12 +148,15 @@ def chunk_docs_md_by_headers(file_path, code_lang="python"):
     if current_chunk:
         chunk_content = '\n'.join(current_chunk).strip()
         if chunk_content:
+            chunk_counter += 1
             chunks_content.append(chunk_content)
             chunks_metadata.append({
                 "source": os.path.relpath(file_path),
                 "file_name": file_name,  
                 "hierarchy": ", ".join(current_headers),
-                "title": current_headers[-1]
+                "title": current_headers[-1],
+                "url": file_url,
+                "chunk_number": chunk_counter
             })
     
     return chunks_metadata, chunks_content, content
@@ -200,7 +230,7 @@ all_chunks_context = []
 
 # for file_path in tqdm(ipynb_file_paths, total=len(ipynb_file_paths)):
 for j, file_path in enumerate(ipynb_file_paths):
-    chunks_metadata, chunks_content, whole_document = chunk_docs_md_by_headers(file_path)
+    chunks_metadata, chunks_content, whole_document = chunk_docs_md_by_headers(file_path, code_lang=code_lang, url_prefix=f"https://github.com/hms-dbmi/")
     # save doc
     os.makedirs(root_dir, exist_ok=True)
     with open(f"{root_dir}{os.path.splitext(os.path.basename(file_path))[0]}.md", 'w') as f:
