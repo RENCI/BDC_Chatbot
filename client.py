@@ -132,7 +132,7 @@ def parse_bdc_context(context):
                 start_seconds = int(doc["metadata"]["start_seconds"])
                 minutes = start_seconds // 60
                 seconds = start_seconds % 60
-                source["title"] += f" — timestamp {minutes}m {seconds}s"
+                source["title"] += f" — @{minutes}m {seconds}s"
             
             sources.append(source)
         else:
@@ -349,7 +349,7 @@ def display_response(response, showBDCSources=False):
     #if response.get("combined_response", None):
     #    st.markdown(response["combined_response"])
     if "code_response" in keys:
-        # Full URL should be returned by the server
+        # XXX: Full URL should be returned by the server
         code_base_url = "https://github.com/hms-dbmi/Access-to-Data-using-PIC-SURE-API/blob/master/"
         source_offset = len("../Access-to-Data-using-PIC-SURE-API/")
 
@@ -362,14 +362,16 @@ def display_response(response, showBDCSources=False):
 
         # Group by file name
         file_names = []
+        grouped_blocks = []
         for code_block in code_blocks:
             file_name = code_block.get("file_name", "unknown_file")
             if file_name not in file_names:
                 file_names.append(file_name)
-
-        grouped_blocks = []
-        for file_name in file_names:
-            grouped_blocks.append({"file_name": file_name, "code_blocks": []})
+                grouped_blocks.append({
+                    "file_name": file_name, 
+                    #"url": code_block.get("url", "unknown_url"), 
+                    "source": code_block.get("source", "unknown_source"),
+                    "code_blocks": []})
 
         for code_block in code_blocks:
             for group in grouped_blocks:
@@ -377,15 +379,21 @@ def display_response(response, showBDCSources=False):
                     group["code_blocks"].append(code_block)
                     break
 
+        # Sort blocks in each group by chunk number
+        for group in grouped_blocks:
+            group["code_blocks"].sort(key=lambda x: x.get("chunk_number", 0))
+
         # Show response
         st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}", unsafe_allow_html=True)
         st.markdown("*View relevant code samples below*")
         for group in grouped_blocks:
-            st.markdown(f"**{group['file_name']}** [:material/launch:]({code_base_url}{code_block['source'][source_offset:]})")
+            # XXX: Temporary fix for URL until server returns full URL
+            #st.markdown(f"**{group['file_name']}** [:material/launch:]({group["url"]})")
+            st.markdown(f"**{group["file_name"]}** [:material/launch:]({code_base_url}{group["source"][source_offset:]})")
 
             for code_block in group["code_blocks"]:
-                with st.expander(f":material/code: {code_block['title']}", expanded=False):
-                    st.markdown(f"{code_block['original']}")
+                with st.expander(f":material/code: {code_block["title"]}", expanded=False):
+                    st.markdown(f"{code_block["original"]}")
 
 with st.chat_message("bdc-assistant"):
     st.markdown(greeting)
