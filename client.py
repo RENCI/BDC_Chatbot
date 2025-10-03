@@ -388,89 +388,92 @@ def display_response(response, showBDCSources=False):
                 with st.expander(f":material/code: {code_block["title"]}", expanded=False):
                     st.markdown(f"{code_block["original"]}")
 
-with st.chat_message("bdc-assistant"):
-    st.markdown(greeting)
+with st.container():
+    with st.chat_message("bdc-assistant"):
+        st.markdown(greeting)
 
-    with st.container():
-        # Initialize button state in session state
-        if "sample_prompt_button_pressed" not in st.session_state:
-            st.session_state["sample_prompt_button_pressed"] = ""
-        
-        st.markdown(
-            """
-            <style>
-            /* these styles align button sizes in the sample button grid */
-            .stButton {
-                display: flex;
-                & > button {
-                    padding: 1rem;
-                    font-size: 1rem;
-                    flex: 1;
-                    height: 4rem;
+        with st.container():
+            # Initialize button state in session state
+            if "sample_prompt_button_pressed" not in st.session_state:
+                st.session_state["sample_prompt_button_pressed"] = ""
+            
+            st.markdown(
+                """
+                <style>
+                /* these styles align button sizes in the sample button grid */
+                .stButton {
+                    display: flex;
+                    & > button {
+                        padding: 1rem;
+                        font-size: 1rem;
+                        flex: 1;
+                        height: 4rem;
+                    }
                 }
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-        
-        # sample prompt buttons
-        num_rows = math.floor(len(sample_prompts) / 2)
-        button_rows = [st.columns(2), st.columns(2), st.columns(2)]
-        for r, row in enumerate(button_rows):
-            this_row_prompts = sample_prompts[0 + r*2:2 + r*2]
-            for c, prompt in enumerate(this_row_prompts):
-                button_rows[r][c].button(
-                    prompt,
-                    key=f"example_prompt_{r}_{c}",
-                    on_click=handle_click_sample_prompt, 
-                    args=(prompt,)
-                )
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+            
+            # sample prompt buttons
+            num_rows = math.floor(len(sample_prompts) / 2)
+            button_rows = [st.columns(2), st.columns(2), st.columns(2)]
+            for r, row in enumerate(button_rows):
+                this_row_prompts = sample_prompts[0 + r*2:2 + r*2]
+                for c, prompt in enumerate(this_row_prompts):
+                    button_rows[r][c].button(
+                        prompt,
+                        key=f"example_prompt_{r}_{c}",
+                        on_click=handle_click_sample_prompt, 
+                        args=(prompt,)
+                    )
 
 if prompt := (st.chat_input("Ask a question") or st.session_state["sample_prompt_button_pressed"]):   
     for history in st.session_state["history"]:        
+        with st.container():
+            with st.chat_message("using-bdc"):
+                st.empty()
+                display_input(history.get("input", ""))
+            with st.chat_message("bdc-assistant"):
+                # Need empty to avoid stale greyed out elements with spinner
+                st.empty()
+                display_response(history.get("response", {}))
+    
+    with st.container():
         with st.chat_message("using-bdc"):
-            st.empty()
-            display_input(history.get("input", ""))
+            display_input(prompt)
+
         with st.chat_message("bdc-assistant"):
-            # Need empty to avoid stale greyed out elements with spinner
-            st.empty()
-            display_response(history.get("response", {}))
-
-    with st.chat_message("using-bdc"):
-        display_input(prompt)
-
-    with st.chat_message("bdc-assistant"):
-        # Add spinner while thinking
-        with st.spinner("Generating response...", show_time=show_timer):            
-            # Get response from server
-            response = current_chain.invoke({"input": prompt, "chat_history": st.session_state["chat_history"]})
-            
-        display_response(response)
+            # Add spinner while thinking
+            with st.spinner("Generating response...", show_time=show_timer):            
+                # Get response from server
+                response = current_chain.invoke({"input": prompt, "chat_history": st.session_state["chat_history"]})
+                
+            display_response(response)
         
-        # Create answer from response to store for chat history
-        answer = ""
-        separator = "\n\n"
+    # Create answer from response to store for chat history
+    answer = ""
+    separator = "\n\n"
 
-        # Combine multiple responses if they exist
-        if response.get("guardrail_response", None):
-            answer += response["guardrail_response"]
-        if response.get("predefined_response", None):
-            for predefined in response.get("predefined_response", []):
-                answer += separator
-                answer += predefined
-        if response.get("bdc_response", None):
+    # Combine multiple responses if they exist
+    if response.get("guardrail_response", None):
+        answer += response["guardrail_response"]
+    if response.get("predefined_response", None):
+        for predefined in response.get("predefined_response", []):
             answer += separator
-            answer += response["bdc_response"]
-        if response.get("dug_response", None):
-            answer += separator
-            answer += response["dug_response"]
-        #if response.get("combined_response", None):
-        #    answer += separator
-        #    answer += response["combined_response"]
-        if response.get("code_response", None):
-            answer += separator
-            answer += response["code_response"]
+            answer += predefined
+    if response.get("bdc_response", None):
+        answer += separator
+        answer += response["bdc_response"]
+    if response.get("dug_response", None):
+        answer += separator
+        answer += response["dug_response"]
+    #if response.get("combined_response", None):
+    #    answer += separator
+    #    answer += response["combined_response"]
+    if response.get("code_response", None):
+        answer += separator
+        answer += response["code_response"]
 
     # Store prompts and answer for history to send as context for converstion   
     st.session_state["chat_history"].extend([(HumanMessage(content=prompt)), (AIMessage(content=answer))])
