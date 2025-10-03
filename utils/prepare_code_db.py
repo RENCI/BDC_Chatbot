@@ -6,6 +6,7 @@ from tqdm import tqdm
 from pprint import pprint  
 
 from pathlib import Path
+import shutil
 
 import pickle
 
@@ -292,6 +293,9 @@ all_ids = [str(uuid.uuid4()) for _ in range(len(all_chunks_content))]
 print("start embedding...")
 all_embeddings = emb.embed_documents(all_rephrased_chunks)
 
+
+print("delete existing chroma db...")
+shutil.rmtree("./.chroma_db_code_doc/", ignore_errors=True)
 
 print("start saving to chroma...")
 persistent_client = chromadb.PersistentClient(path="./.chroma_db_code_doc/") # DB_PATH_CODE_DOC
