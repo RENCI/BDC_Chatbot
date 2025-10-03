@@ -349,10 +349,6 @@ def display_response(response, showBDCSources=False):
     #if response.get("combined_response", None):
     #    st.markdown(response["combined_response"])
     if "code_response" in keys:
-        # XXX: Full URL should be returned by the server
-        code_base_url = "https://github.com/hms-dbmi/Access-to-Data-using-PIC-SURE-API/blob/master/"
-        source_offset = len("../Access-to-Data-using-PIC-SURE-API/")
-
         context = response.get("code_context", [])
 
         # Get the context in the correct format
@@ -369,8 +365,7 @@ def display_response(response, showBDCSources=False):
                 file_names.append(file_name)
                 grouped_blocks.append({
                     "file_name": file_name, 
-                    #"url": code_block.get("url", "unknown_url"), 
-                    "source": code_block.get("source", "unknown_source"),
+                    "url": code_block.get("url", "unknown_url"), 
                     "code_blocks": []})
 
         for code_block in code_blocks:
@@ -387,9 +382,7 @@ def display_response(response, showBDCSources=False):
         st.markdown(f"{get_response_text(response, "code_response", "Missing code response")}", unsafe_allow_html=True)
         st.markdown("*View relevant code samples below*")
         for group in grouped_blocks:
-            # XXX: Temporary fix for URL until server returns full URL
-            #st.markdown(f"**{group['file_name']}** [:material/launch:]({group["url"]})")
-            st.markdown(f"**{group["file_name"]}** [:material/launch:]({code_base_url}{group["source"][source_offset:]})")
+            st.markdown(f"**{group['file_name']}** [:material/launch:]({group["url"]})")
 
             for code_block in group["code_blocks"]:
                 with st.expander(f":material/code: {code_block["title"]}", expanded=False):
