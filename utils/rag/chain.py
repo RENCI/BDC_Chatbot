@@ -534,6 +534,7 @@ def create_query_classifier_chain(llm):
         - "How do I get started with BDC?" -> "bdc"        
         - "Can I download data from BDC?" -> "bdc"
         - "How can I find datasets in BDC?" -> "bdc"
+        - "What kind of data is in BDC?" -> "bdc"
         - "What studies have data on heart failure?" -> "dug"
         - "Is cancer data available in BDC?" -> "both"
         - "How do I access variables using R PIC-SURE API?" -> "coding"
