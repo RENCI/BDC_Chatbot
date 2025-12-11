@@ -4,8 +4,10 @@ from langchain_core.messages import HumanMessage, AIMessage
 from collections import defaultdict
 from langserve import RemoteRunnable
 from streamlit_d3graph import d3graph
+from d3graph import vec2adjmat, import_example
 import math
 import argparse
+import json
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description="BDC Bot")
@@ -190,6 +192,9 @@ def process_kg(kg):
     if not kg or "nodes" not in kg or "edges" not in kg:
         return None, None
 
+    with open("knowledge_graph.json", "w") as f:
+        json.dump(kg, f, indent=2)
+
     # Build node and edge lists
     nodes = kg.get("nodes", [])
     edges = kg.get("edges", [])
@@ -199,33 +204,41 @@ def process_kg(kg):
 
     # Build node dataframe for d3graph
     import pandas as pd
+    
+    node_data = {}
     node_ids = []
-    node_labels = []
-    node_categories = []
-    node_colors = []
+    
     for node in nodes:
         node_id = node.get("id")
+        if not node_id:
+            continue  # Skip nodes without IDs
+            
+        name = node.get("name", "Unknown")
+        categories = node.get("category", ["Unknown"])
+        categories = [cat.replace("biolink:", "") for cat in categories]
+        description = node.get("description", "")
+
         node_ids.append(node_id)
-        node_labels.append(node.get("name", node_id))
-        category = node.get("category", ["biolink:NamedThing"])[0]
-        node_categories.append(category.replace("biolink:", ""))
-        node_colors.append(string_to_color(category))
-    df = pd.DataFrame({
-        "label": node_labels,
-        "category": node_categories,
-        "color": node_colors
-    }, index=node_ids)
+        node_data[node_id] = {
+            "name": name,
+            "category": categories[0],
+            "color": string_to_color(categories[0]),
+            "tooltip": f'Name: {name}\n\nCategor{"ies" if len(categories) > 1 else "y"}: {", ".join(categories)}\n\n{"Description: " + description if description else ""}\n\nID: {node_id}'
+        }
+
+    # Create DataFrame with node_ids as index
+    node_df = pd.DataFrame([node_data[nid] for nid in node_ids], index=node_ids)
 
     # Build adjacency matrix for d3graph
-    adjmat = pd.DataFrame(0, index=node_ids, columns=node_ids)
+    adjmat_df = pd.DataFrame(0, index=node_ids, columns=node_ids)
     for edge in edges:
         source = edge.get("subject")
         target = edge.get("object")
         if source in node_ids and target in node_ids:
-            adjmat.at[source, target] = 1
+            adjmat_df.at[source, target] = 1
+            adjmat_df.at[target, source] = 1
 
-    return adjmat, df
-
+    return adjmat_df, node_df
 
 def draw_dug_response(response, response_title, show_response, kg=None):
     with st.expander(f":material/find_in_page: {response_title}", expanded=show_response):
@@ -241,7 +254,13 @@ def draw_dug_response(response, response_title, show_response, kg=None):
             st.markdown("\n---\nKnowledge Graph:")
             
             d3.graph(adjmat)
-            d3.set_node_properties(label=df["label"].values, color=df["color"].values)
+            d3.set_node_properties(
+                label="",
+                color=df["category"].values,
+                cmap="Set1",
+                opacity="",
+                tooltip=df["tooltip"].values,
+            )
             d3.show(show_slider=False, save_button=False)
 
 # Set the current chain to use to get response from server
@@ -429,6 +448,28 @@ with st.container():
                         on_click=handle_click_sample_prompt, 
                         args=(prompt,)
                     )
+
+            # Load and display knowledge graph from file if it exists
+            try:
+                with open("knowledge_graph.json", "r") as f:
+                    kg_data = json.load(f)
+                adjmat, nodes = process_kg(kg_data)
+                if adjmat is not None and nodes is not None:
+                    st.markdown("**Knowledge Graph:**")
+                    d3.graph(adjmat)
+
+                    # Setting per-node properties in d3.set_node_properties is not working, so do per node
+                    for node_id in nodes.index:
+                        color = nodes.at[node_id, 'color']
+                        tooltip = nodes.at[node_id, 'tooltip']
+                        d3.node_properties[node_id]['label'] = ""
+                        d3.node_properties[node_id]['color'] = color
+                        d3.node_properties[node_id]['opacity'] = 1
+                        d3.node_properties[node_id]['tooltip'] = tooltip
+
+                    d3.show(show_slider=False, save_button=False)
+            except FileNotFoundError:
+                pass
 
 if prompt := (st.chat_input("Ask a question") or st.session_state["sample_prompt_button_pressed"]):   
     for history in st.session_state["history"]:        
