@@ -215,7 +215,7 @@ def process_kg(kg):
         node_data[node_id] = {
             "name": name,
             "category": categories[0],
-            "tooltip": f'Name: {name}\n\nCategor{"ies" if len(categories) > 1 else "y"}: {", ".join(categories)}\n\n{"Description: " + description if description else ""}\n\nID: {node_id}'
+            "tooltip": f'Name: {name}\n\nCategor{"ies" if len(categories) > 1 else "y"}: {", ".join(categories)}{"\n\nDescription: " + description if description else ""}\n\nID: {node_id}'
         }
 
     # Create DataFrame with node_ids as index
@@ -246,13 +246,16 @@ def draw_dug_response(response, response_title, show_response, kg=None):
             st.markdown("\n---\nKnowledge Graph:")
             
             d3.graph(adjmat)
-            d3.set_node_properties(
-                label="",
-                color=df["category"].values,
-                cmap="Set1",
-                opacity="",
-                tooltip=df["tooltip"].values,
-            )
+
+            # Setting per-node properties in d3.set_node_properties is not working, so do per node
+            
+            color_scale = ColorScale()
+            for node_id in nodes.index:                        
+                d3.node_properties[node_id]['label'] = ""
+                d3.node_properties[node_id]['color'] = color_scale.get_color(nodes.at[node_id, 'category'])
+                d3.node_properties[node_id]['opacity'] = 1
+                d3.node_properties[node_id]['tooltip'] = nodes.at[node_id, 'tooltip']
+
             d3.show(show_slider=False, save_button=False)
 
 # Set the current chain to use to get response from server
@@ -448,6 +451,7 @@ with st.container():
                 adjmat, nodes = process_kg(kg_data)
                 if adjmat is not None and nodes is not None:
                     st.markdown("**Knowledge Graph:**")
+
                     d3.graph(adjmat)
 
                     color_scale = ColorScale()
