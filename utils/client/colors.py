@@ -19,5 +19,8 @@ class ColorScale:
         self.colorMap[value] = color
         return color
     
+    def get_values(self):
+        return self.colorMap.keys()
+
     def __len__(self):
         return len(self.colors)

@@ -464,6 +464,15 @@ with st.container():
                         d3.node_properties[node_id]['tooltip'] = nodes.at[node_id, 'tooltip']
 
                     d3.show(show_slider=False, save_button=False)
+
+                    # Add legend
+                    legend = ""
+                    for category in color_scale.get_values():
+                        color = color_scale.get_color(category)
+                        legend += f"<span style='border-radius: 1em; margin: 0 0.5em 0 0; padding: .4em .8em .4em .8em; font-size: small; font-weight: bold; background-color: {color}; color: white;'>{category}</span>"
+                    
+                    st.markdown(legend, unsafe_allow_html=True)
+
             except FileNotFoundError:
                 pass
 
