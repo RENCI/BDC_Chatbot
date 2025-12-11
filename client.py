@@ -8,6 +8,7 @@ from d3graph import vec2adjmat, import_example
 import math
 import argparse
 import json
+from utils.client.colors import ColorScale
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description="BDC Bot")
@@ -178,14 +179,6 @@ def draw_sources(sources, showSources):
                 # Join lines with a line break and render via markdown
                 st.markdown("<br>".join(source_lines), unsafe_allow_html=True)
 
-# Color for knowledge graph nodes
-def string_to_color(s):
-    # Simple hash to color hex (for demonstration)
-    import hashlib
-    if not s:
-        s = "default"
-    return "#" + hashlib.md5(s.encode()).hexdigest()[:6]
-
 # Process the dug knowledge graph for visualization
 def process_kg(kg):
     # Check if kg has no nodes or edges before displaying
@@ -222,7 +215,6 @@ def process_kg(kg):
         node_data[node_id] = {
             "name": name,
             "category": categories[0],
-            "color": string_to_color(categories[0]),
             "tooltip": f'Name: {name}\n\nCategor{"ies" if len(categories) > 1 else "y"}: {", ".join(categories)}\n\n{"Description: " + description if description else ""}\n\nID: {node_id}'
         }
 
@@ -458,14 +450,14 @@ with st.container():
                     st.markdown("**Knowledge Graph:**")
                     d3.graph(adjmat)
 
+                    color_scale = ColorScale()
+
                     # Setting per-node properties in d3.set_node_properties is not working, so do per node
-                    for node_id in nodes.index:
-                        color = nodes.at[node_id, 'color']
-                        tooltip = nodes.at[node_id, 'tooltip']
+                    for node_id in nodes.index:                        
                         d3.node_properties[node_id]['label'] = ""
-                        d3.node_properties[node_id]['color'] = color
+                        d3.node_properties[node_id]['color'] = color_scale.get_color(nodes.at[node_id, 'category'])
                         d3.node_properties[node_id]['opacity'] = 1
-                        d3.node_properties[node_id]['tooltip'] = tooltip
+                        d3.node_properties[node_id]['tooltip'] = nodes.at[node_id, 'tooltip']
 
                     d3.show(show_slider=False, save_button=False)
             except FileNotFoundError:
