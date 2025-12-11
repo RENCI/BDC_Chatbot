@@ -4,10 +4,8 @@ from langchain_core.messages import HumanMessage, AIMessage
 from collections import defaultdict
 from langserve import RemoteRunnable
 from streamlit_d3graph import d3graph
-from d3graph import vec2adjmat, import_example
 import math
 import argparse
-import json
 from utils.client.colors import ColorScale
 
 # Parse command line arguments
@@ -184,9 +182,6 @@ def process_kg(kg):
     # Check if kg has no nodes or edges before displaying
     if not kg or "nodes" not in kg or "edges" not in kg:
         return None, None
-
-    with open("knowledge_graph.json", "w") as f:
-        json.dump(kg, f, indent=2)
 
     # Build node and edge lists
     nodes = kg.get("nodes", [])
