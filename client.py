@@ -238,9 +238,9 @@ def draw_dug_response(response, response_title, show_response, kg=None):
         #st.markdown("*Powered by DugBot* [:material/launch:](https://search-dev.biodatacatalyst.renci.org/chat-v2/)")
 
         if kg is not None:
-            adjmat, df = process_kg(kg)
+            adjmat, nodes = process_kg(kg)
 
-            if adjmat is None or df is None:
+            if adjmat is None or nodes is None:
                 return
             
             st.markdown("\n---\nKnowledge Graph:")
@@ -257,6 +257,14 @@ def draw_dug_response(response, response_title, show_response, kg=None):
                 d3.node_properties[node_id]['tooltip'] = nodes.at[node_id, 'tooltip']
 
             d3.show(show_slider=False, save_button=False)
+
+            # Add legend
+            legend = ""
+            for category in color_scale.get_values():
+                color = color_scale.get_color(category)
+                legend += f"<span style='border-radius: 1em; margin: 0 0.5em 0 0; padding: .4em .8em .4em .8em; font-size: small; font-weight: bold; background-color: {color}; color: white;'>{category}</span>"
+            
+            st.markdown(legend, unsafe_allow_html=True)
 
 # Set the current chain to use to get response from server
 current_chain = default_rag_chain
@@ -443,38 +451,6 @@ with st.container():
                         on_click=handle_click_sample_prompt, 
                         args=(prompt,)
                     )
-
-            # Load and display knowledge graph from file if it exists
-            try:
-                with open("knowledge_graph.json", "r") as f:
-                    kg_data = json.load(f)
-                adjmat, nodes = process_kg(kg_data)
-                if adjmat is not None and nodes is not None:
-                    st.markdown("**Knowledge Graph:**")
-
-                    d3.graph(adjmat)
-
-                    color_scale = ColorScale()
-
-                    # Setting per-node properties in d3.set_node_properties is not working, so do per node
-                    for node_id in nodes.index:                        
-                        d3.node_properties[node_id]['label'] = ""
-                        d3.node_properties[node_id]['color'] = color_scale.get_color(nodes.at[node_id, 'category'])
-                        d3.node_properties[node_id]['opacity'] = 1
-                        d3.node_properties[node_id]['tooltip'] = nodes.at[node_id, 'tooltip']
-
-                    d3.show(show_slider=False, save_button=False)
-
-                    # Add legend
-                    legend = ""
-                    for category in color_scale.get_values():
-                        color = color_scale.get_color(category)
-                        legend += f"<span style='border-radius: 1em; margin: 0 0.5em 0 0; padding: .4em .8em .4em .8em; font-size: small; font-weight: bold; background-color: {color}; color: white;'>{category}</span>"
-                    
-                    st.markdown(legend, unsafe_allow_html=True)
-
-            except FileNotFoundError:
-                pass
 
 if prompt := (st.chat_input("Ask a question") or st.session_state["sample_prompt_button_pressed"]):   
     for history in st.session_state["history"]:        
