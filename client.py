@@ -229,37 +229,41 @@ def process_kg(kg):
 
 def draw_dug_response(response, response_title, show_response, kg=None):
     with st.expander(f":material/find_in_page: {response_title}", expanded=show_response):
-        st.markdown(response)
-        #st.markdown("*Powered by DugBot* [:material/launch:](https://search-dev.biodatacatalyst.renci.org/chat-v2/)")
+        if kg is None:
+            st.markdown(response)
+            #st.markdown("*Powered by DugBot* [:material/launch:](https://search-dev.biodatacatalyst.renci.org/chat-v2/)")
+        else:
+            tab1, tab2 = st.tabs(["Response", "Knowledge Graph"])
 
-        if kg is not None:
-            adjmat, nodes = process_kg(kg)
+            with tab1:
+                st.markdown(response)
+                #st.markdown("*Powered by DugBot* [:material/launch:](https://search-dev.biodatacatalyst.renci.org/chat-v2/)")
+            with tab2:  
+                adjmat, nodes = process_kg(kg)
 
-            if adjmat is None or nodes is None:
-                return
-            
-            st.markdown("\n---\nKnowledge Graph:")
-            
-            d3.graph(adjmat)
+                if adjmat is None or nodes is None:
+                    return
+                
+                d3.graph(adjmat)
 
-            # Setting per-node properties in d3.set_node_properties is not working, so do per node
-            
-            color_scale = ColorScale()
-            for node_id in nodes.index:                        
-                d3.node_properties[node_id]['label'] = ""
-                d3.node_properties[node_id]['color'] = color_scale.get_color(nodes.at[node_id, 'category'])
-                d3.node_properties[node_id]['opacity'] = 1
-                d3.node_properties[node_id]['tooltip'] = nodes.at[node_id, 'tooltip']
+                # Setting per-node properties in d3.set_node_properties is not working, so do per node
+                
+                color_scale = ColorScale()
+                for node_id in nodes.index:                        
+                    d3.node_properties[node_id]['label'] = ""
+                    d3.node_properties[node_id]['color'] = color_scale.get_color(nodes.at[node_id, 'category'])
+                    d3.node_properties[node_id]['opacity'] = 1
+                    d3.node_properties[node_id]['tooltip'] = nodes.at[node_id, 'tooltip']
 
-            d3.show(show_slider=False, save_button=False)
+                d3.show(show_slider=False, save_button=False)
 
-            # Add legend
-            legend = ""
-            for category in color_scale.get_values():
-                color = color_scale.get_color(category)
-                legend += f"<span style='border-radius: 1em; margin: 0 0.5em 0 0; padding: .4em .8em .4em .8em; font-size: small; font-weight: bold; background-color: {color}; color: white;'>{category}</span>"
-            
-            st.markdown(legend, unsafe_allow_html=True)
+                # Add legend
+                legend = ""
+                for category in color_scale.get_values():
+                    color = color_scale.get_color(category)
+                    legend += f"<span style='border-radius: 1em; margin: 0 0.5em 0 0; padding: .4em .8em .4em .8em; font-size: small; font-weight: bold; background-color: {color}; color: white;'>{category}</span>"
+                
+                st.markdown(legend, unsafe_allow_html=True)
 
 # Set the current chain to use to get response from server
 current_chain = default_rag_chain
